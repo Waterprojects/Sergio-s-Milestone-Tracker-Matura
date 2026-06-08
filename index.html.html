@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#080808;
+  --glass-bg:rgba(255,255,255,0.04);
+  --glass-border:rgba(255,255,255,0.10);
+  --glass-hover:rgba(255,255,255,0.08);
+  --glass-done:rgba(52,211,120,0.14);
+  --glass-done-border:rgba(52,211,120,0.40);
+  --text-primary:#f0f0ee;
+  --text-secondary:rgba(240,240,238,0.45);
+  --text-muted:rgba(240,240,238,0.28);
+  --accent:#34d378;
+  --accent-dim:rgba(52,211,120,0.18);
+  --connector:rgba(255,255,255,0.12);
+  --node-radius:14px;
+  --font:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+}
+
+html,body{height:100%;overflow:hidden}
+body{
+  background:var(--bg);
+  color:var(--text-primary);
+  font-family:var(--font);
+  font-size:14px;
+  display:flex;
+  flex-direction:column;
+}
+
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse 80% 60% at 20% 40%, rgba(52,211,120,0.04) 0%, transparent 60%),
+             radial-gradient(ellipse 50% 50% at 80% 70%, rgba(100,120,255,0.03) 0%, transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* HEADER */
+header{
+  position:relative;z-index:10;
+  display:flex;align-items:center;gap:16px;
+  padding:16px 28px;
+  border-bottom:0.5px solid var(--glass-border);
+  backdrop-filter:blur(8px);
+  flex-shrink:0;
+}
+header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-primary);}
+.header-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 8px var(--accent);flex-shrink:0;
+}
+.header-actions{display:flex;gap:8px;margin-left:auto}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:8px;
+  font-family:var(--font);font-size:12px;font-weight:400;
+  cursor:pointer;transition:all .18s ease;
+  border:0.5px solid var(--glass-border);
+  background:var(--glass-bg);color:var(--text-secondary);
+}
+.btn:hover{background:var(--glass-hover);color:var(--text-primary);border-color:rgba(255,255,255,0.2)}
+.btn-accent{background:var(--accent-dim);color:var(--accent);border-color:var(--glass-done-border)}
+.btn-accent:hover{background:rgba(52,211,120,0.25);color:var(--accent)}
+
+/* MAIN LAYOUT */
+.main{position:relative;z-index:1;display:flex;flex:1;overflow:hidden;}
+
+/* TREE PANEL */
+.tree-panel{
+  flex:1;overflow:auto;
+  padding:32px 24px 48px 36px;
+  position:relative;
+}
+.tree-panel::-webkit-scrollbar{width:4px;height:4px}
+.tree-panel::-webkit-scrollbar-track{background:transparent}
+.tree-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+.tree-root{
+  display:flex;align-items:flex-start;
+  min-height:100%;
+}
+
+#connector-svg{
+  position:absolute;top:0;left:0;
+  width:100%;height:100%;
+  pointer-events:none;overflow:visible;
+}
+
+/* NODES */
+.node-wrap{position:relative;margin:8px 0;}
+
+.node{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;
+  border-radius:var(--node-radius);
+  border:0.5px solid var(--glass-border);
+  background:var(--glass-bg);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  cursor:pointer;
+  transition:background .2s,border-color .2s,transform .15s;
+  position:relative;
+  white-space:nowrap;
+  user-select:none;
+  min-width:140px;max-width:220px;
+}
+.node::before{
+  content:'';position:absolute;inset:0;
+  border-radius:var(--node-radius);
+  background:linear-gradient(135deg,rgba(255,255,255,0.07) 0%,transparent 60%);
+  pointer-events:none;
+}
+.node:hover{background:var(--glass-hover);border-color:rgba(255,255,255,0.18);transform:translateY(-1px);}
+.node.done{background:var(--glass-done);border-color:var(--glass-done-border);}
+.node.done::before{background:linear-gradient(135deg,rgba(52,211,120,0.12) 0%,transparent 60%);}
+.node.done .node-label{color:var(--accent)}
+.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;}
+.node-check{
+  width:16px;height:16px;border-radius:50%;
+  border:1.5px solid rgba(255,255,255,0.2);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.node.done .node-check{background:var(--accent);border-color:var(--accent);}
+.check-mark{display:none;width:8px;height:8px}
+.node.done .check-mark{display:block}
+
+.node-actions{
+  display:none;gap:4px;align-items:center;
+  position:absolute;right:-88px;top:50%;transform:translateY(-50%);
+  background:rgba(20,20,20,0.95);
+  border:0.5px solid var(--glass-border);
+  border-radius:8px;padding:4px 6px;
+  z-index:20;
+}
+.node-wrap:hover .node-actions{display:flex}
+.icon-btn{
+  width:24px;height:24px;border-radius:5px;
+  background:transparent;border:none;
+  color:var(--text-secondary);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;transition:all .15s;font-family:var(--font);
+}
+.icon-btn:hover{background:var(--glass-hover);color:var(--text-primary)}
+.icon-btn.danger:hover{background:rgba(255,80,80,0.15);color:#ff6060}
+
+.node-done-date{
+  font-size:10px;color:var(--accent);opacity:.65;font-family:var(--mono);
+  margin-top:2px;margin-left:2px;display:block;font-weight:300;
+}
+
+.children{
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  transition:max-height .4s cubic-bezier(.4,0,.2,1),opacity .3s;
+  max-height:4000px;opacity:1;
+}
+.children.collapsed{max-height:0;opacity:0;pointer-events:none}
+
+.collapse-arrow{
+  font-size:10px;color:var(--text-muted);margin-left:auto;flex-shrink:0;
+  display:flex;align-items:center;transition:transform .25s;
+}
+.node.has-children.collapsed .collapse-arrow{transform:rotate(-90deg)}
+
+/* NOTES PANEL */
+.divider{width:0.5px;background:var(--glass-border);flex-shrink:0;}
+.notes-panel{width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;}
+.notes-header{
+  padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+}
+.notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
+.notes-tabs{display:flex;gap:4px;margin-left:auto}
+.tab-btn{
+  padding:4px 10px;border-radius:6px;font-size:11px;
+  background:transparent;border:0.5px solid transparent;
+  color:var(--text-muted);cursor:pointer;font-family:var(--font);transition:all .15s;
+}
+.tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
+
+.notes-body{flex:1;overflow:hidden;position:relative}
+#notes-edit{
+  width:100%;height:100%;background:transparent;border:none;outline:none;
+  color:var(--text-primary);font-family:var(--mono);
+  font-size:13px;line-height:1.7;font-weight:300;
+  padding:20px;resize:none;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent;
+}
+#notes-edit::placeholder{color:var(--text-muted)}
+#notes-preview{
+  display:none;padding:20px;overflow:auto;height:100%;
+  font-size:13px;line-height:1.8;color:var(--text-secondary);
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,0.1) transparent;
+}
+#notes-preview.visible{display:block}
+#notes-preview h1,#notes-preview h2,#notes-preview h3{color:var(--text-primary);font-weight:500;margin:1.2em 0 .5em;}
+#notes-preview h1{font-size:16px}#notes-preview h2{font-size:14px}#notes-preview h3{font-size:13px}
+#notes-preview p{margin:.5em 0}
+#notes-preview code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,0.07);padding:1px 5px;border-radius:4px;}
+#notes-preview pre{background:rgba(255,255,255,0.05);border:0.5px solid var(--glass-border);border-radius:8px;padding:12px;margin:.8em 0;overflow-x:auto;}
+#notes-preview pre code{background:none;padding:0}
+#notes-preview ul,#notes-preview ol{padding-left:1.4em;margin:.5em 0}
+#notes-preview li{margin:.25em 0}
+#notes-preview blockquote{border-left:2px solid var(--glass-border);margin:.8em 0;padding:.4em 0 .4em 12px;color:var(--text-muted);font-style:italic;}
+#notes-preview a{color:var(--accent);text-decoration:none}
+#notes-preview strong{color:var(--text-primary);font-weight:500}
+#notes-preview hr{border:none;border-top:0.5px solid var(--glass-border);margin:1em 0}
+
+/* MODAL */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+  z-index:100;align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:#111;border:0.5px solid var(--glass-border);
+  border-radius:16px;padding:28px;width:380px;
+  animation:modal-in .2s cubic-bezier(.4,0,.2,1);
+}
+@keyframes modal-in{from{opacity:0;transform:scale(.96) translateY(4px)}to{opacity:1;transform:none}}
+.modal h2{font-size:14px;font-weight:500;margin-bottom:18px;color:var(--text-primary)}
+.modal label{font-size:11px;color:var(--text-muted);display:block;margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase}
+.modal input,.modal select{
+  width:100%;padding:8px 12px;
+  background:rgba(255,255,255,0.05);border:0.5px solid var(--glass-border);
+  border-radius:8px;color:var(--text-primary);font-family:var(--font);font-size:13px;
+  outline:none;margin-bottom:14px;transition:border-color .15s;
+}
+.modal input:focus,.modal select:focus{border-color:rgba(255,255,255,0.25)}
+.modal input::placeholder{color:var(--text-muted)}
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.date-modal input[type=date]{color-scheme:dark}
+
+/* PROGRESS BAR */
+.progress-bar-wrap{
+  flex-shrink:0;padding:10px 28px;border-top:0.5px solid var(--glass-border);
+  display:flex;align-items:center;gap:14px;
+}
+.progress-bar-track{flex:1;height:2px;background:rgba(255,255,255,0.07);border-radius:1px;overflow:hidden;}
+.progress-bar-fill{height:100%;background:var(--accent);border-radius:1px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.progress-label{font-size:11px;color:var(--text-muted);font-family:var(--mono);white-space:nowrap}
+
+/* EMPTY STATE */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;height:100%;opacity:.4;
+  font-size:13px;color:var(--text-secondary);
+  width:100%;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-dot"></div>
+  <h1 id="project-title-display">Project Tracker</h1>
+  <div class="header-actions">
+    <button class="btn" onclick="openRenameProject()">✎ Rename</button>
+    <button class="btn btn-accent" onclick="openAddMajor()">+ Milestone</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="tree-panel" id="tree-panel">
+    <svg id="connector-svg" aria-hidden="true"></svg>
+    <div class="tree-root" id="tree-root"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="notes-panel">
+    <div class="notes-header">
+      <span>Notes</span>
+      <div class="notes-tabs">
+        <button class="tab-btn active" id="tab-edit" onclick="switchTab('edit')">Edit</button>
+        <button class="tab-btn" id="tab-preview" onclick="switchTab('preview')">Preview</button>
+      </div>
+    </div>
+    <div class="notes-body">
+      <textarea id="notes-edit" placeholder="Write notes, markdown supported…&#10;&#10;## Progress Update&#10;**Bold**, _italic_, `code`&#10;- list items"></textarea>
+      <div id="notes-preview"></div>
+    </div>
+  </div>
+</div>
+
+<div class="progress-bar-wrap">
+  <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="progress-label" id="progress-label">0 / 0 done</div>
+</div>
+
+<!-- Modal: Add / Edit Node -->
+<div class="modal-overlay" id="modal-node">
+  <div class="modal">
+    <h2 id="modal-title">Add Milestone</h2>
+    <label>Label</label>
+    <input type="text" id="modal-label-input" placeholder="Milestone name…" />
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-node')">Cancel</button>
+      <button class="btn btn-accent" id="modal-confirm-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Mark done / set date -->
+<div class="modal-overlay date-modal" id="modal-date">
+  <div class="modal">
+    <h2>Mark as finished</h2>
+    <label>Completion date</label>
+    <input type="date" id="modal-date-input" />
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-date')">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmDate()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Rename project -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal">
+    <h2>Rename project</h2>
+    <label>Project name</label>
+    <input type="text" id="modal-project-input" placeholder="My Project…" />
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-project')">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmRenameProject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────
+let state = {
+  projectName: 'Project Tracker',
+  nodes: [],
+  notes: '',
+};
+let _nextId = 1;
+const STORE_KEY = 'pt_state_v2';
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      state = s;
+      _nextId = Math.max(0, ...state.nodes.map(n => n.id)) + 1;
+    }
+  } catch(e){}
+}
+
+function saveState(){
+  localStorage.setItem(STORE_KEY, JSON.stringify(state));
+}
+
+// ── MODAL CORE ────────────────────────────────
+// Single source of truth: _nodeModal holds the current modal's intent
+let _nodeModal = { mode: null, parentId: null, editId: null };
+
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+}
+
+// Click overlay to close
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => {
+    if(e.target === el) el.classList.remove('open');
+  });
+});
+
+// ── ADD / EDIT NODE ────────────────────────────
+function openAddMajor(){
+  _nodeModal = { mode: 'add-major', parentId: null, editId: null };
+  document.getElementById('modal-title').textContent = 'Add milestone';
+  document.getElementById('modal-label-input').value = '';
+  document.getElementById('modal-confirm-btn').textContent = 'Add';
+  openModal('modal-node');
+  setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
+}
+
+function openAddSub(parentId){
+  _nodeModal = { mode: 'add-sub', parentId: parentId, editId: null };
+  document.getElementById('modal-title').textContent = 'Add sub-milestone';
+  document.getElementById('modal-label-input').value = '';
+  document.getElementById('modal-confirm-btn').textContent = 'Add';
+  openModal('modal-node');
+  setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
+}
+
+function openEditNode(nodeId){
+  const node = state.nodes.find(n => n.id === nodeId);
+  if(!node) return;
+  _nodeModal = { mode: 'edit', parentId: null, editId: nodeId };
+  document.getElementById('modal-title').textContent = 'Rename milestone';
+  document.getElementById('modal-label-input').value = node.label;
+  document.getElementById('modal-confirm-btn').textContent = 'Save';
+  openModal('modal-node');
+  setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
+}
+
+// Single confirm handler — reads _nodeModal to know what to do
+function confirmNode(){
+  const label = document.getElementById('modal-label-input').value.trim();
+  if(!label) return;
+
+  const { mode, parentId, editId } = _nodeModal;
+
+  if(mode === 'edit'){
+    const node = state.nodes.find(n => n.id === editId);
+    if(node) node.label = label;
+  } else {
+    // 'add-major' → parentId is null; 'add-sub' → parentId is set
+    state.nodes.push({
+      id: _nextId++,
+      label,
+      parentId: mode === 'add-sub' ? parentId : null,
+      done: false,
+      doneDate: null,
+      collapsed: false
+    });
+  }
+
+  saveState();
+  render();
+  closeModal('modal-node');
+}
+
+// Wire up the confirm button and Enter key once — no re-assignment needed
+document.getElementById('modal-confirm-btn').addEventListener('click', confirmNode);
+document.getElementById('modal-label-input').addEventListener('keydown', e => {
+  if(e.key === 'Enter') confirmNode();
+  if(e.key === 'Escape') closeModal('modal-node');
+});
+
+// ── RENAME PROJECT ─────────────────────────────
+function openRenameProject(){
+  document.getElementById('modal-project-input').value = state.projectName;
+  openModal('modal-project');
+  setTimeout(() => document.getElementById('modal-project-input').focus(), 80);
+}
+function confirmRenameProject(){
+  const val = document.getElementById('modal-project-input').value.trim();
+  if(val){
+    state.projectName = val;
+    document.getElementById('project-title-display').textContent = val;
+    saveState();
+  }
+  closeModal('modal-project');
+}
+document.getElementById('modal-project-input').addEventListener('keydown', e => {
+  if(e.key === 'Enter') confirmRenameProject();
+  if(e.key === 'Escape') closeModal('modal-project');
+});
+
+// ── MARK DONE / UNDONE ─────────────────────────
+let _dateNodeId = null;
+function toggleDone(nodeId){
+  const node = state.nodes.find(n => n.id === nodeId);
+  if(!node) return;
+  if(node.done){
+    node.done = false; node.doneDate = null;
+    saveState(); render();
+  } else {
+    _dateNodeId = nodeId;
+    document.getElementById('modal-date-input').value = new Date().toISOString().split('T')[0];
+    openModal('modal-date');
+  }
+}
+function confirmDate(){
+  const node = state.nodes.find(n => n.id === _dateNodeId);
+  if(node){
+    node.done = true;
+    node.doneDate = document.getElementById('modal-date-input').value || new Date().toISOString().split('T')[0];
+    saveState(); render();
+  }
+  closeModal('modal-date');
+}
+
+// ── DELETE NODE ────────────────────────────────
+function deleteNode(nodeId){
+  function collectIds(id){
+    const kids = state.nodes.filter(n => n.parentId === id).map(n => n.id);
+    return [id, ...kids.flatMap(collectIds)];
+  }
+  const toRemove = new Set(collectIds(nodeId));
+  state.nodes = state.nodes.filter(n => !toRemove.has(n.id));
+  saveState(); render();
+}
+
+// ── COLLAPSE ───────────────────────────────────
+function toggleCollapse(nodeId){
+  const node = state.nodes.find(n => n.id === nodeId);
+  if(!node) return;
+  node.collapsed = !node.collapsed;
+  saveState(); render();
+}
+
+// ── NOTES ──────────────────────────────────────
+const notesEl = document.getElementById('notes-edit');
+notesEl.addEventListener('input', () => {
+  state.notes = notesEl.value;
+  saveState();
+  if(document.getElementById('notes-preview').classList.contains('visible')) renderPreview();
+});
+
+function switchTab(tab){
+  document.getElementById('tab-edit').classList.toggle('active', tab === 'edit');
+  document.getElementById('tab-preview').classList.toggle('active', tab === 'preview');
+  const editEl = document.getElementById('notes-edit');
+  const previewEl = document.getElementById('notes-preview');
+  if(tab === 'edit'){
+    editEl.style.display = 'block';
+    previewEl.classList.remove('visible');
+  } else {
+    editEl.style.display = 'none';
+    renderPreview();
+    previewEl.classList.add('visible');
+  }
+}
+function renderPreview(){
+  document.getElementById('notes-preview').innerHTML = marked.parse(state.notes || '');
+}
+
+// ── RENDER TREE ────────────────────────────────
+function render(){
+  const root = document.getElementById('tree-root');
+  const majorNodes = state.nodes.filter(n => n.parentId === null);
+
+  document.getElementById('project-title-display').textContent = state.projectName;
+  notesEl.value = state.notes;
+  root.innerHTML = '';
+
+  if(!majorNodes.length){
+    const emp = document.createElement('div');
+    emp.className = 'empty-state';
+    emp.innerHTML = '<div style="font-size:28px;opacity:.3">⬡</div><div>No milestones yet</div>';
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-accent';
+    btn.style.opacity = '1';
+    btn.textContent = '+ Add first milestone';
+    btn.onclick = openAddMajor;
+    emp.appendChild(btn);
+    root.appendChild(emp);
+    updateProgress();
+    drawConnectors();
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;gap:0;width:max-content';
+
+  for(const major of majorNodes){
+    wrap.appendChild(buildRow(major, 0));
+  }
+  root.appendChild(wrap);
+
+  updateProgress();
+  requestAnimationFrame(drawConnectors);
+}
+
+function buildRow(node, depth){
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:flex-start;';
+  row.dataset.rowId = node.id;
+
+  row.appendChild(createNodeEl(node, depth));
+
+  const children = state.nodes.filter(n => n.parentId === node.id);
+  if(children.length){
+    const spacer = document.createElement('div');
+    spacer.style.cssText = 'width:56px;flex-shrink:0;';
+    row.appendChild(spacer);
+
+    const childCol = document.createElement('div');
+    childCol.style.cssText = 'display:flex;flex-direction:column;';
+    childCol.classList.add('children');
+    if(node.collapsed) childCol.classList.add('collapsed');
+
+    for(const child of children){
+      childCol.appendChild(buildRow(child, depth + 1));
+    }
+    row.appendChild(childCol);
+  }
+
+  return row;
+}
+
+function createNodeEl(node, depth){
+  const children = state.nodes.filter(n => n.parentId === node.id);
+  const hasChildren = children.length > 0;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'node-wrap';
+  wrap.dataset.nodeId = node.id;
+
+  const nodeDiv = document.createElement('div');
+  nodeDiv.className = 'node'
+    + (node.done ? ' done' : '')
+    + (hasChildren && node.collapsed ? ' collapsed' : '')
+    + (hasChildren ? ' has-children' : '');
+  nodeDiv.dataset.nodeId = node.id;
+
+  // Check circle
+  const check = document.createElement('div');
+  check.className = 'node-check';
+  if(node.done){
+    check.innerHTML = '<svg class="check-mark" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3 6.5L7 1.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  check.addEventListener('click', e => { e.stopPropagation(); toggleDone(node.id); });
+  nodeDiv.appendChild(check);
+
+  // Label
+  const label = document.createElement('span');
+  label.className = 'node-label';
+  label.textContent = node.label;
+  nodeDiv.appendChild(label);
+
+  // Collapse arrow
+  if(hasChildren){
+    const arrow = document.createElement('span');
+    arrow.className = 'collapse-arrow';
+    arrow.innerHTML = '<svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 3L4 5.5L6.5 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    nodeDiv.appendChild(arrow);
+    nodeDiv.addEventListener('click', e => {
+      if(e.target.closest('.node-check')) return;
+      toggleCollapse(node.id);
+    });
+  }
+
+  wrap.appendChild(nodeDiv);
+
+  // Done date
+  if(node.done && node.doneDate){
+    const dateEl = document.createElement('span');
+    dateEl.className = 'node-done-date';
+    dateEl.textContent = '✓ ' + formatDate(node.doneDate);
+    wrap.appendChild(dateEl);
+  }
+
+  // Hover actions
+  const actions = document.createElement('div');
+  actions.className = 'node-actions';
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'icon-btn';
+  addBtn.title = 'Add sub-milestone';
+  addBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="2" x2="6" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+  addBtn.addEventListener('click', e => { e.stopPropagation(); openAddSub(node.id); });
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'icon-btn';
+  editBtn.title = 'Rename';
+  editBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 8.5L8.5 2 10 3.5 3.5 10H2V8.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  editBtn.addEventListener('click', e => { e.stopPropagation(); openEditNode(node.id); });
+
+  const delBtn = document.createElement('button');
+  delBtn.className = 'icon-btn danger';
+  delBtn.title = 'Delete';
+  delBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3H10M4.5 3V2H7.5V3M4 3L4.5 10H7.5L8 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  delBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    if(confirm('Delete this milestone and all sub-milestones?')) deleteNode(node.id);
+  });
+
+  actions.appendChild(addBtn);
+  actions.appendChild(editBtn);
+  actions.appendChild(delBtn);
+  wrap.appendChild(actions);
+
+  return wrap;
+}
+
+// ── SVG CONNECTORS ─────────────────────────────
+function drawConnectors(){
+  const svg = document.getElementById('connector-svg');
+  const panel = document.getElementById('tree-panel');
+  svg.innerHTML = '';
+  const panelRect = panel.getBoundingClientRect();
+
+  const positions = {};
+  document.querySelectorAll('.node[data-node-id]').forEach(el => {
+    const nid = parseInt(el.dataset.nodeId);
+    const r = el.getBoundingClientRect();
+    positions[nid] = {
+      cy:    r.top  - panelRect.top  + panel.scrollTop  + r.height / 2,
+      right: r.right - panelRect.left + panel.scrollLeft,
+      left:  r.left  - panelRect.left + panel.scrollLeft,
+    };
+  });
+
+  state.nodes.forEach(node => {
+    if(node.parentId === null) return;
+    const parent = state.nodes.find(n => n.id === node.parentId);
+    if(!parent || parent.collapsed) return;
+    const p = positions[parent.id];
+    const c = positions[node.id];
+    if(!p || !c) return;
+
+    const x1 = p.right, y1 = p.cy;
+    const x2 = c.left,  y2 = c.cy;
+    const mx = (x1 + x2) / 2;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', node.done ? 'rgba(52,211,120,0.3)' : 'rgba(255,255,255,0.10)');
+    path.setAttribute('stroke-width', '1');
+    svg.appendChild(path);
+  });
+}
+
+// ── PROGRESS ───────────────────────────────────
+function updateProgress(){
+  const all  = state.nodes.length;
+  const done = state.nodes.filter(n => n.done).length;
+  const pct  = all ? Math.round(done / all * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = `${done} / ${all} done`;
+}
+
+// ── UTILS ──────────────────────────────────────
+function formatDate(str){
+  if(!str) return '';
+  const [y, m, d] = str.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d} ${months[parseInt(m) - 1]} ${y}`;
+}
+
+// ── INIT ───────────────────────────────────────
+window.addEventListener('resize', drawConnectors);
+document.getElementById('tree-panel').addEventListener('scroll', drawConnectors);
+
+loadState();
+render();
+</script>
+</body>
+</html>
