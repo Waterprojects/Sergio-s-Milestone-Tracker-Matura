@@ -287,7 +287,22 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 .date-modal input[type=date]{color-scheme:dark}
 
-/* PROGRESS BAR */
+/* SYNC STATUS */
+.sync-idle .sync-dot{background:rgba(255,255,255,0.2);}
+.sync-saving .sync-dot{background:#f0c040;box-shadow:0 0 6px #f0c040;animation:pulse 1s infinite;}
+.sync-ok .sync-dot{background:var(--accent);box-shadow:0 0 6px var(--accent);}
+.sync-err .sync-dot{background:#ff5f5f;box-shadow:0 0 6px #ff5f5f;}
+#sync-status{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 10px;border-radius:8px;
+  border:0.5px solid var(--glass-border);
+  background:var(--glass-bg);
+  font-size:11px;color:var(--text-muted);
+  font-family:var(--mono);
+  cursor:default;
+}
+.sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .progress-bar-wrap{
   flex-shrink:0;padding:10px 28px;border-top:0.5px solid var(--glass-border);
   display:flex;align-items:center;gap:14px;
@@ -311,6 +326,11 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   <div class="header-dot"></div>
   <h1 id="project-title-display">Project Tracker</h1>
   <div class="header-actions">
+    <div id="sync-status" class="sync-idle" title="GitHub sync status">
+      <span class="sync-dot"></span>
+      <span class="sync-label">idle</span>
+    </div>
+    <button class="btn" onclick="openGithubConfig()">⚙ Config</button>
     <button class="btn" onclick="openRenameProject()">✎ Rename</button>
     <button class="btn btn-accent" onclick="openAddMajor()">+ Milestone</button>
   </div>
@@ -363,6 +383,29 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   </button>
 </div>
 
+<!-- Modal: GitHub Config -->
+<div class="modal-overlay" id="modal-github">
+  <div class="modal">
+    <h2>GitHub sync setup</h2>
+    <label>GitHub username</label>
+    <input type="text" id="gh-owner" placeholder="your-username" />
+    <label>Repository name</label>
+    <input type="text" id="gh-repo" placeholder="your-repo-name" />
+    <label>Branch</label>
+    <input type="text" id="gh-branch" placeholder="main" />
+    <label>Personal Access Token</label>
+    <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" />
+    <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
+      Token needs <code style="font-family:var(--mono);background:rgba(255,255,255,0.07);padding:1px 4px;border-radius:3px;">repo</code> scope only.
+      Stored in your browser — never sent anywhere except GitHub's API.
+    </p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-github')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveGithubConfig()">Save &amp; test</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Add / Edit Node -->
 <div class="modal-overlay" id="modal-node">
   <div class="modal">
@@ -403,28 +446,161 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 </div>
 
 <script>
+// ── CONFIG ────────────────────────────────────
+// GitHub config lives in localStorage (it's just credentials + repo info,
+// not the tracker data itself)
+const CFG_KEY  = 'pt_github_cfg';
+const DATA_PATH = 'tracker-data.json';  // file committed into the repo
+
+function loadConfig(){
+  try{ return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }
+  catch(e){ return {}; }
+}
+function saveConfig(cfg){
+  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+}
+function hasConfig(){
+  const c = loadConfig();
+  return !!(c.owner && c.repo && c.branch && c.token);
+}
+
+function openGithubConfig(){
+  const c = loadConfig();
+  document.getElementById('gh-owner').value  = c.owner  || '';
+  document.getElementById('gh-repo').value   = c.repo   || '';
+  document.getElementById('gh-branch').value = c.branch || 'main';
+  document.getElementById('gh-token').value  = c.token  || '';
+  openModal('modal-github');
+  setTimeout(() => document.getElementById('gh-owner').focus(), 80);
+}
+async function saveGithubConfig(){
+  const cfg = {
+    owner:  document.getElementById('gh-owner').value.trim(),
+    repo:   document.getElementById('gh-repo').value.trim(),
+    branch: document.getElementById('gh-branch').value.trim() || 'main',
+    token:  document.getElementById('gh-token').value.trim(),
+  };
+  if(!cfg.owner || !cfg.repo || !cfg.token){
+    alert('Please fill in username, repo and token.'); return;
+  }
+  saveConfig(cfg);
+  closeModal('modal-github');
+  // Test by trying to push current state
+  setSyncStatus('saving', 'testing…');
+  const ok = await pushToGithub();
+  if(ok) setSyncStatus('ok', 'connected');
+  else   setSyncStatus('err', 'check config');
+}
+
+// ── SYNC STATUS UI ────────────────────────────
+function setSyncStatus(state, label){
+  const el = document.getElementById('sync-status');
+  el.className = 'sync-' + state;
+  el.querySelector('.sync-label').textContent = label;
+}
+
 // ── DATA ──────────────────────────────────────
 let state = {
   projectName: 'Project Tracker',
   nodes: [],
   notes: '',
+  notesPanelCollapsed: false,
 };
 let _nextId = 1;
-const STORE_KEY = 'pt_state_v2';
+const LOCAL_KEY = 'pt_state_v2';  // local cache, always written in parallel
 
-function loadState(){
+// debounce so rapid changes batch into one commit
+let _saveTimer = null;
+function saveState(){
+  // always write local cache instantly
+  localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+  // debounce the GitHub push by 1.5 s
+  clearTimeout(_saveTimer);
+  if(hasConfig()){
+    setSyncStatus('saving', 'saving…');
+    _saveTimer = setTimeout(async () => {
+      const ok = await pushToGithub();
+      setSyncStatus(ok ? 'ok' : 'err', ok ? 'saved' : 'error');
+    }, 1500);
+  }
+}
+
+// ── GITHUB API ────────────────────────────────
+// We store the file's SHA so GitHub lets us update it without conflicts
+let _fileSha = null;
+
+async function pushToGithub(){
+  const cfg = loadConfig();
+  if(!cfg.token) return false;
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
+  const body = {
+    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+    content,
+    branch: cfg.branch,
+  };
+  if(_fileSha) body.sha = _fileSha;   // required for updates (not creates)
   try{
-    const raw = localStorage.getItem(STORE_KEY);
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${cfg.token}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if(res.ok){
+      const data = await res.json();
+      _fileSha = data.content.sha;     // store new SHA for next save
+      return true;
+    }
+    console.error('GitHub push failed:', res.status, await res.text());
+    return false;
+  } catch(e){
+    console.error('GitHub push error:', e);
+    return false;
+  }
+}
+
+async function pullFromGithub(){
+  const cfg = loadConfig();
+  if(!cfg.token) return false;
+  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}?ref=${cfg.branch}&t=${Date.now()}`;
+  try{
+    const res = await fetch(url, {
+      headers:{ 'Authorization': `token ${cfg.token}` }
+    });
+    if(res.status === 404){
+      // File doesn't exist yet — that's fine on first use
+      setSyncStatus('ok', 'ready');
+      return false;
+    }
+    if(!res.ok){ setSyncStatus('err', 'load error'); return false; }
+    const data = await res.json();
+    _fileSha = data.sha;  // remember SHA for future updates
+    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    const remote = JSON.parse(decoded);
+    state = remote;
+    _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
+    return true;
+  } catch(e){
+    console.error('GitHub pull error:', e);
+    setSyncStatus('err', 'load error');
+    return false;
+  }
+}
+
+// ── LOCAL FALLBACK LOAD ────────────────────────
+function loadLocalState(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
     if(raw){
       const s = JSON.parse(raw);
       state = s;
-      _nextId = Math.max(0, ...state.nodes.map(n => n.id)) + 1;
+      _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
     }
   } catch(e){}
-}
-
-function saveState(){
-  localStorage.setItem(STORE_KEY, JSON.stringify(state));
 }
 
 // ── MODAL CORE ────────────────────────────────
@@ -836,14 +1012,33 @@ function formatDate(str){
 window.addEventListener('resize', drawConnectors);
 document.getElementById('tree-panel').addEventListener('scroll', drawConnectors);
 
-loadState();
-render();
+(async () => {
+  // Always load local cache first so the page isn't blank while we fetch
+  loadLocalState();
+  render();
 
-// Restore notes panel state
-if(state.notesPanelCollapsed){
-  document.getElementById('notes-panel').classList.add('collapsed');
-  document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
-}
+  if(state.notesPanelCollapsed){
+    document.getElementById('notes-panel').classList.add('collapsed');
+    document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
+  }
+
+  if(hasConfig()){
+    setSyncStatus('saving', 'loading…');
+    const pulled = await pullFromGithub();
+    if(pulled){
+      setSyncStatus('ok', 'loaded');
+      render();  // re-render with fresh remote data
+      if(state.notesPanelCollapsed){
+        document.getElementById('notes-panel').classList.add('collapsed');
+        document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
+      }
+    } else {
+      // pullFromGithub sets its own status on error; if 404 it sets 'ready'
+    }
+  } else {
+    setSyncStatus('idle', 'no config');
+  }
+})();
 </script>
 </body>
 </html>
