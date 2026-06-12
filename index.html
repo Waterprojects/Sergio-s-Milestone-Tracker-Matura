@@ -61,7 +61,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   width:8px;height:8px;border-radius:50%;
   background:var(--accent);box-shadow:0 0 8px var(--accent);flex-shrink:0;
 }
-.header-actions{display:flex;gap:8px;margin-left:auto}
+.header-actions{display:flex;gap:8px;margin-left:auto;align-items:center;}
 .btn{
   display:inline-flex;align-items:center;gap:6px;
   padding:6px 14px;border-radius:8px;
@@ -73,6 +73,45 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .btn:hover{background:var(--glass-hover);color:var(--text-primary);border-color:rgba(255,255,255,0.2)}
 .btn-accent{background:var(--accent-dim);color:var(--accent);border-color:var(--glass-done-border)}
 .btn-accent:hover{background:rgba(52,211,120,0.25);color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn-save{
+  background:var(--accent-dim);color:var(--accent);
+  border-color:var(--glass-done-border);
+  font-weight:500;
+}
+.btn-save:hover:not(:disabled){background:rgba(52,211,120,0.3);color:var(--accent);}
+.btn-save.dirty{
+  background:rgba(52,211,120,0.25);
+  box-shadow:0 0 0 1px rgba(52,211,120,0.4);
+}
+
+/* viewer mode banner */
+.viewer-banner{
+  display:none;
+  background:rgba(52,211,120,0.07);
+  border-bottom:0.5px solid rgba(52,211,120,0.2);
+  padding:7px 28px;
+  font-size:11px;
+  color:var(--accent);
+  font-family:var(--mono);
+  letter-spacing:.03em;
+  flex-shrink:0;
+  align-items:center;
+  gap:8px;
+}
+.viewer-banner.visible{display:flex;}
+
+/* SAVE STATUS */
+#save-status{
+  font-size:11px;
+  font-family:var(--mono);
+  color:var(--text-muted);
+  white-space:nowrap;
+  padding:0 4px;
+}
+#save-status.ok{color:var(--accent);}
+#save-status.err{color:#ff6060;}
+#save-status.saving{color:#f0c040;}
 
 /* MAIN LAYOUT */
 .main{position:relative;z-index:1;display:flex;flex:1;overflow:hidden;}
@@ -137,7 +176,12 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .check-mark{display:none;width:8px;height:8px}
 .node.done .check-mark{display:block}
 
-/* shared fixed toolbar — never clipped */
+/* viewer: disable interactive cursors */
+body.viewer-mode .node{cursor:default;}
+body.viewer-mode .node:hover{transform:none;}
+body.viewer-mode .node-check{pointer-events:none;cursor:default;}
+
+/* shared fixed toolbar */
 #node-toolbar{
   display:none;
   position:fixed;
@@ -180,34 +224,12 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .node.has-children.collapsed .collapse-arrow{transform:rotate(-90deg)}
 
 /* NOTES PANEL */
-.divider{
-  width:0.5px;background:var(--glass-border);flex-shrink:0;
-  transition:opacity .3s;
+.divider-wrap{
+  position:relative;
+  flex-shrink:0;
+  width:0.5px;
+  background:var(--glass-border);
 }
-.notes-panel{
-  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
-  transition:width .35s cubic-bezier(.4,0,.2,1);
-}
-.notes-panel.collapsed{width:0;}
-.notes-panel.collapsed .notes-header,
-.notes-panel.collapsed .notes-body{ opacity:0; pointer-events:none; }
-
-.notes-header{
-  padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
-  display:flex;align-items:center;gap:8px;flex-shrink:0;
-  transition:opacity .2s;
-  min-width:340px; /* prevent wrap during collapse animation */
-}
-.notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
-.notes-tabs{display:flex;gap:4px;margin-left:auto}
-.tab-btn{
-  padding:4px 10px;border-radius:6px;font-size:11px;
-  background:transparent;border:0.5px solid transparent;
-  color:var(--text-muted);cursor:pointer;font-family:var(--font);transition:all .15s;
-}
-.tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
-
-/* Notes collapse toggle — sits on the divider */
 .notes-toggle{
   position:absolute;
   top:50%;transform:translateY(-50%);
@@ -220,18 +242,34 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   color:var(--text-muted);
   transition:background .15s, color .15s;
   z-index:10;
-  right:-9px; /* center on divider */
+  right:-9px;
 }
 .notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
 .notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
-.divider-wrap{
-  position:relative;
-  flex-shrink:0;
-  width:0.5px;
-  background:var(--glass-border);
+.notes-panel{
+  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
+  transition:width .35s cubic-bezier(.4,0,.2,1);
 }
+.notes-panel.collapsed{width:0;}
+.notes-panel.collapsed .notes-header,
+.notes-panel.collapsed .notes-body{ opacity:0; pointer-events:none; }
+
+.notes-header{
+  padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
+  display:flex;align-items:center;gap:8px;flex-shrink:0;
+  transition:opacity .2s;
+  min-width:340px;
+}
+.notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
+.notes-tabs{display:flex;gap:4px;margin-left:auto}
+.tab-btn{
+  padding:4px 10px;border-radius:6px;font-size:11px;
+  background:transparent;border:0.5px solid transparent;
+  color:var(--text-muted);cursor:pointer;font-family:var(--font);transition:all .15s;
+}
+.tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
 
 .notes-body{flex:1;overflow:hidden;position:relative;min-width:340px;transition:opacity .2s;}
 #notes-edit{
@@ -270,7 +308,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .modal-overlay.open{display:flex}
 .modal{
   background:#111;border:0.5px solid var(--glass-border);
-  border-radius:16px;padding:28px;width:380px;
+  border-radius:16px;padding:28px;width:420px;
   animation:modal-in .2s cubic-bezier(.4,0,.2,1);
 }
 @keyframes modal-in{from{opacity:0;transform:scale(.96) translateY(4px)}to{opacity:1;transform:none}}
@@ -286,23 +324,17 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .modal input::placeholder{color:var(--text-muted)}
 .modal-footer{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 .date-modal input[type=date]{color-scheme:dark}
-
-/* SYNC STATUS */
-.sync-idle .sync-dot{background:rgba(255,255,255,0.2);}
-.sync-saving .sync-dot{background:#f0c040;box-shadow:0 0 6px #f0c040;animation:pulse 1s infinite;}
-.sync-ok .sync-dot{background:var(--accent);box-shadow:0 0 6px var(--accent);}
-.sync-err .sync-dot{background:#ff5f5f;box-shadow:0 0 6px #ff5f5f;}
-#sync-status{
-  display:flex;align-items:center;gap:6px;
-  padding:4px 10px;border-radius:8px;
-  border:0.5px solid var(--glass-border);
-  background:var(--glass-bg);
-  font-size:11px;color:var(--text-muted);
-  font-family:var(--mono);
-  cursor:default;
+.share-link-box{
+  width:100%;padding:8px 12px;
+  background:rgba(255,255,255,0.03);border:0.5px solid var(--glass-border);
+  border-radius:8px;color:var(--accent);font-family:var(--mono);font-size:11px;
+  margin-bottom:14px;word-break:break-all;line-height:1.6;
+  user-select:all;
 }
-.sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:background .3s;}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.modal-note{font-size:11px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;}
+.modal-note code{font-family:var(--mono);background:rgba(255,255,255,0.07);padding:1px 4px;border-radius:3px;}
+
+/* PROGRESS */
 .progress-bar-wrap{
   flex-shrink:0;padding:10px 28px;border-top:0.5px solid var(--glass-border);
   display:flex;align-items:center;gap:14px;
@@ -318,6 +350,19 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   font-size:13px;color:var(--text-secondary);
   width:100%;
 }
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:rgba(20,20,20,0.97);border:0.5px solid var(--glass-border);
+  border-radius:10px;padding:10px 18px;
+  font-size:12px;font-family:var(--mono);color:var(--text-secondary);
+  opacity:0;transition:opacity .2s,transform .2s;
+  pointer-events:none;z-index:9999;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.toast-ok{color:var(--accent);}
+#toast.toast-err{color:#ff6060;}
 </style>
 </head>
 <body>
@@ -325,16 +370,15 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 <header>
   <div class="header-dot"></div>
   <h1 id="project-title-display">Project Tracker</h1>
-  <div class="header-actions">
-    <div id="sync-status" class="sync-idle" title="GitHub sync status">
-      <span class="sync-dot"></span>
-      <span class="sync-label">idle</span>
-    </div>
-    <button class="btn" onclick="openGithubConfig()">⚙ Config</button>
-    <button class="btn" onclick="openRenameProject()">✎ Rename</button>
-    <button class="btn btn-accent" onclick="openAddMajor()">+ Milestone</button>
+  <div class="header-actions" id="header-actions">
+    <!-- populated by JS based on mode -->
   </div>
 </header>
+
+<div class="viewer-banner" id="viewer-banner">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5V8.5M6 3.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+  View-only mode — you're seeing a live snapshot. No edits can be made.
+</div>
 
 <div class="main">
   <div class="tree-panel" id="tree-panel">
@@ -370,7 +414,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   <div class="progress-label" id="progress-label">0 / 0 done</div>
 </div>
 
-<!-- Shared node toolbar (fixed position, never clipped) -->
+<!-- Shared node toolbar (owner only, hidden in viewer mode) -->
 <div id="node-toolbar">
   <button class="icon-btn" id="tb-add" title="Add sub-milestone">
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="2" x2="6" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="6" x2="10" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -389,19 +433,18 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
     <h2>GitHub sync setup</h2>
     <label>GitHub username</label>
     <input type="text" id="gh-owner" placeholder="your-username" />
-    <label>Repository name</label>
+    <label>Repository name (must be public for share links)</label>
     <input type="text" id="gh-repo" placeholder="your-repo-name" />
     <label>Branch</label>
     <input type="text" id="gh-branch" placeholder="main" />
     <label>Personal Access Token</label>
     <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" />
-    <p style="font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.6;">
-      Token needs <code style="font-family:var(--mono);background:rgba(255,255,255,0.07);padding:1px 4px;border-radius:3px;">repo</code> scope only.
-      Stored in your browser — never sent anywhere except GitHub's API.
+    <p class="modal-note">
+      Token needs <code>repo</code> scope only. Stored in your browser only — never shared, never sent anywhere except GitHub's API directly from your device.
     </p>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-github')">Cancel</button>
-      <button class="btn btn-accent" onclick="saveGithubConfig()">Save &amp; test</button>
+      <button class="btn btn-accent" onclick="saveGithubConfig()">Save</button>
     </div>
   </div>
 </div>
@@ -409,7 +452,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 <!-- Modal: Add / Edit Node -->
 <div class="modal-overlay" id="modal-node">
   <div class="modal">
-    <h2 id="modal-title">Add Milestone</h2>
+    <h2 id="modal-node-title">Add Milestone</h2>
     <label>Label</label>
     <input type="text" id="modal-label-input" placeholder="Milestone name…" />
     <div class="modal-footer">
@@ -445,20 +488,46 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   </div>
 </div>
 
+<!-- Modal: Share link -->
+<div class="modal-overlay" id="modal-share">
+  <div class="modal">
+    <h2>Share with someone</h2>
+    <p class="modal-note">Send this link. They'll see the live data in read-only mode — no editing, no access to your token or config.</p>
+    <label>View-only link</label>
+    <div class="share-link-box" id="share-link-text" onclick="copyShareLink()"></div>
+    <p class="modal-note" id="share-visibility-note"></p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-share')">Close</button>
+      <button class="btn btn-accent" onclick="copyShareLink()">Copy link</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
 <script>
-// ── CONFIG ────────────────────────────────────
-// GitHub config lives in localStorage (it's just credentials + repo info,
-// not the tracker data itself)
-const CFG_KEY  = 'pt_github_cfg';
-const DATA_PATH = 'tracker-data.json';  // file committed into the repo
+// ─────────────────────────────────────────────
+// MODE DETECTION
+// ?view=owner/repo/branch  → viewer mode (read-only, no token)
+// no param                 → owner mode (full edit + save)
+// ─────────────────────────────────────────────
+const _urlParams = new URLSearchParams(location.search);
+const _viewParam = _urlParams.get('view'); // "owner/repo/branch" or null
+const IS_VIEWER  = !!_viewParam;
+
+if(IS_VIEWER) document.body.classList.add('viewer-mode');
+
+// ─────────────────────────────────────────────
+// GITHUB CONFIG  (owner mode only — stored in localStorage)
+// ─────────────────────────────────────────────
+const CFG_KEY   = 'pt_github_cfg';
+const DATA_PATH = 'tracker-data.json';
 
 function loadConfig(){
   try{ return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }
   catch(e){ return {}; }
 }
-function saveConfig(cfg){
-  localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
-}
+function saveConfig(cfg){ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 function hasConfig(){
   const c = loadConfig();
   return !!(c.owner && c.repo && c.branch && c.token);
@@ -473,7 +542,7 @@ function openGithubConfig(){
   openModal('modal-github');
   setTimeout(() => document.getElementById('gh-owner').focus(), 80);
 }
-async function saveGithubConfig(){
+function saveGithubConfig(){
   const cfg = {
     owner:  document.getElementById('gh-owner').value.trim(),
     repo:   document.getElementById('gh-repo').value.trim(),
@@ -481,25 +550,16 @@ async function saveGithubConfig(){
     token:  document.getElementById('gh-token').value.trim(),
   };
   if(!cfg.owner || !cfg.repo || !cfg.token){
-    alert('Please fill in username, repo and token.'); return;
+    showToast('Fill in username, repo, and token.','err'); return;
   }
   saveConfig(cfg);
   closeModal('modal-github');
-  // Test by trying to push current state
-  setSyncStatus('saving', 'testing…');
-  const ok = await pushToGithub();
-  if(ok) setSyncStatus('ok', 'connected');
-  else   setSyncStatus('err', 'check config');
+  showToast('Config saved. Use the Save button to push data.','ok');
 }
 
-// ── SYNC STATUS UI ────────────────────────────
-function setSyncStatus(state, label){
-  const el = document.getElementById('sync-status');
-  el.className = 'sync-' + state;
-  el.querySelector('.sync-label').textContent = label;
-}
-
-// ── DATA ──────────────────────────────────────
+// ─────────────────────────────────────────────
+// DATA MODEL
+// ─────────────────────────────────────────────
 let state = {
   projectName: 'Project Tracker',
   nodes: [],
@@ -507,186 +567,319 @@ let state = {
   notesPanelCollapsed: false,
 };
 let _nextId = 1;
-const LOCAL_KEY = 'pt_state_v2';  // local cache, always written in parallel
+const LOCAL_KEY = 'pt_state_v3';
 
-// debounce so rapid changes batch into one commit
-let _saveTimer = null;
-function saveState(){
-  // always write local cache instantly
+// _dirty tracks whether there are unsaved changes since last save
+let _dirty = false;
+function markDirty(){
+  _dirty = true;
+  const btn = document.getElementById('btn-save');
+  if(btn){ btn.classList.add('dirty'); btn.disabled = false; }
+}
+function markClean(){
+  _dirty = false;
+  const btn = document.getElementById('btn-save');
+  if(btn){ btn.classList.remove('dirty'); }
+}
+
+// Write to localStorage only (instant, no network)
+function stashLocal(){
   localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-  // debounce the GitHub push by 1.5 s
-  clearTimeout(_saveTimer);
-  if(hasConfig()){
-    setSyncStatus('saving', 'saving…');
-    _saveTimer = setTimeout(async () => {
-      const ok = await pushToGithub();
-      setSyncStatus(ok ? 'ok' : 'err', ok ? 'saved' : 'error');
-    }, 1500);
-  }
 }
 
-// ── GITHUB API ────────────────────────────────
-// We store the file's SHA so GitHub lets us update it without conflicts
-let _fileSha = null;
-
-async function pushToGithub(){
-  const cfg = loadConfig();
-  if(!cfg.token) return false;
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
-  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
-  const body = {
-    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
-    content,
-    branch: cfg.branch,
-  };
-  if(_fileSha) body.sha = _fileSha;   // required for updates (not creates)
-  try{
-    const res = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${cfg.token}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if(res.ok){
-      const data = await res.json();
-      _fileSha = data.content.sha;     // store new SHA for next save
-      return true;
-    }
-    console.error('GitHub push failed:', res.status, await res.text());
-    return false;
-  } catch(e){
-    console.error('GitHub push error:', e);
-    return false;
-  }
-}
-
-async function pullFromGithub(){
-  const cfg = loadConfig();
-  if(!cfg.token) return false;
-  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}?ref=${cfg.branch}&t=${Date.now()}`;
-  try{
-    const res = await fetch(url, {
-      headers:{ 'Authorization': `token ${cfg.token}` }
-    });
-    if(res.status === 404){
-      // File doesn't exist yet — that's fine on first use
-      setSyncStatus('ok', 'ready');
-      return false;
-    }
-    if(!res.ok){ setSyncStatus('err', 'load error'); return false; }
-    const data = await res.json();
-    _fileSha = data.sha;  // remember SHA for future updates
-    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
-    const remote = JSON.parse(decoded);
-    state = remote;
-    _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(state));
-    return true;
-  } catch(e){
-    console.error('GitHub pull error:', e);
-    setSyncStatus('err', 'load error');
-    return false;
-  }
-}
-
-// ── LOCAL FALLBACK LOAD ────────────────────────
-function loadLocalState(){
+function loadLocal(){
   try{
     const raw = localStorage.getItem(LOCAL_KEY);
     if(raw){
-      const s = JSON.parse(raw);
-      state = s;
+      state = JSON.parse(raw);
       _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
     }
   } catch(e){}
 }
 
-// ── MODAL CORE ────────────────────────────────
-// Single source of truth: _nodeModal holds the current modal's intent
-let _nodeModal = { mode: null, parentId: null, editId: null };
+// ─────────────────────────────────────────────
+// GITHUB API  — reliable read-then-write
+// ─────────────────────────────────────────────
 
-function closeModal(id){
-  document.getElementById(id).classList.remove('open');
-}
-function openModal(id){
-  document.getElementById(id).classList.add('open');
+// Always fetch fresh SHA before writing → no stale-SHA conflicts
+async function githubPush(){
+  const cfg = loadConfig();
+  if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
+
+  const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
+
+  // Step 1: get current SHA (required by GitHub to update an existing file)
+  let sha = null;
+  try{
+    const res = await fetch(`${apiBase}?ref=${cfg.branch}`, {
+      headers:{ 'Authorization': `token ${cfg.token}` }
+    });
+    if(res.ok){
+      const data = await res.json();
+      sha = data.sha;
+    } else if(res.status !== 404){
+      // 404 just means the file doesn't exist yet — that's fine
+      const txt = await res.text();
+      return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,120)}` };
+    }
+  } catch(e){
+    return { ok: false, msg: 'Network error reading file: ' + e.message };
+  }
+
+  // Step 2: write with the fresh SHA
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+  const body = {
+    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+    content,
+    branch: cfg.branch,
+  };
+  if(sha) body.sha = sha;
+
+  try{
+    const res = await fetch(apiBase, {
+      method: 'PUT',
+      headers:{
+        'Authorization': `token ${cfg.token}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if(res.ok) return { ok: true };
+    const txt = await res.text();
+    return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,200)}` };
+  } catch(e){
+    return { ok: false, msg: 'Network error writing file: ' + e.message };
+  }
 }
 
-// Click overlay to close
+// Pull remote data and replace local state
+async function githubPull(){
+  if(IS_VIEWER){
+    // Viewer reads raw public URL — no token needed, no CORS issues
+    const [owner, repo, branch] = _viewParam.split('/');
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${DATA_PATH}?t=${Date.now()}`;
+    try{
+      const res = await fetch(url);
+      if(!res.ok) return { ok: false, msg: `Could not load data (${res.status}). Is the repo public?` };
+      state = await res.json();
+      _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
+      return { ok: true };
+    } catch(e){
+      return { ok: false, msg: 'Failed to load: ' + e.message };
+    }
+  }
+
+  // Owner pull via authenticated API
+  const cfg = loadConfig();
+  if(!cfg.token) return { ok: false, msg: 'No config.' };
+  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}?ref=${cfg.branch}&t=${Date.now()}`;
+  try{
+    const res = await fetch(url, { headers:{ 'Authorization': `token ${cfg.token}` } });
+    if(res.status === 404) return { ok: true, fresh: true }; // file doesn't exist yet
+    if(!res.ok) return { ok: false, msg: `GitHub error ${res.status}` };
+    const data = await res.json();
+    const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    state = JSON.parse(decoded);
+    _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
+    stashLocal();
+    return { ok: true };
+  } catch(e){
+    return { ok: false, msg: 'Pull failed: ' + e.message };
+  }
+}
+
+// ─────────────────────────────────────────────
+// MANUAL SAVE (owner only)
+// ─────────────────────────────────────────────
+async function manualSave(){
+  if(!hasConfig()){
+    openGithubConfig();
+    showToast('Set up GitHub config first.','err');
+    return;
+  }
+  const btn = document.getElementById('btn-save');
+  const statusEl = document.getElementById('save-status');
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  if(statusEl){ statusEl.className = 'saving'; statusEl.textContent = 'saving…'; }
+
+  stashLocal(); // always persist locally first
+  const result = await githubPush();
+
+  if(btn){ btn.textContent = 'Save'; btn.disabled = false; }
+  if(result.ok){
+    markClean();
+    if(statusEl){ statusEl.className = 'ok'; statusEl.textContent = 'saved ✓'; }
+    showToast('Saved to GitHub','ok');
+    setTimeout(() => { if(statusEl) statusEl.textContent = ''; }, 4000);
+  } else {
+    if(statusEl){ statusEl.className = 'err'; statusEl.textContent = 'error'; }
+    showToast(result.msg || 'Save failed','err');
+  }
+}
+
+// ─────────────────────────────────────────────
+// HEADER: build based on mode
+// ─────────────────────────────────────────────
+function buildHeader(){
+  const actions = document.getElementById('header-actions');
+  actions.innerHTML = '';
+
+  if(IS_VIEWER){
+    document.getElementById('viewer-banner').classList.add('visible');
+    // Only show a refresh button for viewer
+    const btnRefresh = document.createElement('button');
+    btnRefresh.className = 'btn';
+    btnRefresh.textContent = '↻ Refresh';
+    btnRefresh.onclick = async () => {
+      btnRefresh.disabled = true;
+      btnRefresh.textContent = 'Loading…';
+      const r = await githubPull();
+      if(r.ok){ render(); showToast('Refreshed','ok'); }
+      else showToast(r.msg,'err');
+      btnRefresh.disabled = false;
+      btnRefresh.textContent = '↻ Refresh';
+    };
+    actions.appendChild(btnRefresh);
+    // Disable notes textarea
+    document.getElementById('notes-edit').readOnly = true;
+    document.getElementById('notes-edit').style.cursor = 'default';
+  } else {
+    // Owner mode
+    const statusEl = document.createElement('span');
+    statusEl.id = 'save-status';
+    actions.appendChild(statusEl);
+
+    const btnSave = document.createElement('button');
+    btnSave.id = 'btn-save';
+    btnSave.className = 'btn btn-save';
+    btnSave.textContent = 'Save';
+    btnSave.onclick = manualSave;
+    actions.appendChild(btnSave);
+
+    const btnShare = document.createElement('button');
+    btnShare.className = 'btn';
+    btnShare.textContent = '⤴ Share';
+    btnShare.onclick = openShareModal;
+    actions.appendChild(btnShare);
+
+    const btnConfig = document.createElement('button');
+    btnConfig.className = 'btn';
+    btnConfig.textContent = '⚙ Config';
+    btnConfig.onclick = openGithubConfig;
+    actions.appendChild(btnConfig);
+
+    const btnRename = document.createElement('button');
+    btnRename.className = 'btn';
+    btnRename.textContent = '✎ Rename';
+    btnRename.onclick = openRenameProject;
+    actions.appendChild(btnRename);
+
+    const btnAdd = document.createElement('button');
+    btnAdd.className = 'btn btn-accent';
+    btnAdd.textContent = '+ Milestone';
+    btnAdd.onclick = openAddMajor;
+    actions.appendChild(btnAdd);
+  }
+}
+
+// ─────────────────────────────────────────────
+// SHARE MODAL
+// ─────────────────────────────────────────────
+function openShareModal(){
+  const cfg = loadConfig();
+  if(!cfg.owner || !cfg.repo || !cfg.branch){
+    showToast('Set up GitHub config first.','err');
+    openGithubConfig();
+    return;
+  }
+  // Build the share URL: current page URL + ?view=owner/repo/branch
+  const base = location.href.split('?')[0];
+  const link = `${base}?view=${cfg.owner}/${cfg.repo}/${cfg.branch}`;
+  document.getElementById('share-link-text').textContent = link;
+  document.getElementById('share-visibility-note').textContent =
+    'The repo must be public for this link to work without a token. If it\'s private, the viewer will see an error.';
+  openModal('modal-share');
+}
+function copyShareLink(){
+  const text = document.getElementById('share-link-text').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Link copied!','ok'));
+}
+
+// ─────────────────────────────────────────────
+// MODAL CORE
+// ─────────────────────────────────────────────
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+
 document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => {
-    if(e.target === el) el.classList.remove('open');
-  });
+  el.addEventListener('click', e => { if(e.target === el) el.classList.remove('open'); });
 });
 
-// ── ADD / EDIT NODE ────────────────────────────
+// ─────────────────────────────────────────────
+// ADD / EDIT NODE
+// ─────────────────────────────────────────────
+let _nodeModal = { mode: null, parentId: null, editId: null };
+
 function openAddMajor(){
+  if(IS_VIEWER) return;
   _nodeModal = { mode: 'add-major', parentId: null, editId: null };
-  document.getElementById('modal-title').textContent = 'Add milestone';
+  document.getElementById('modal-node-title').textContent = 'Add milestone';
   document.getElementById('modal-label-input').value = '';
   document.getElementById('modal-confirm-btn').textContent = 'Add';
   openModal('modal-node');
   setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
 }
-
 function openAddSub(parentId){
-  _nodeModal = { mode: 'add-sub', parentId: parentId, editId: null };
-  document.getElementById('modal-title').textContent = 'Add sub-milestone';
+  if(IS_VIEWER) return;
+  _nodeModal = { mode: 'add-sub', parentId, editId: null };
+  document.getElementById('modal-node-title').textContent = 'Add sub-milestone';
   document.getElementById('modal-label-input').value = '';
   document.getElementById('modal-confirm-btn').textContent = 'Add';
   openModal('modal-node');
   setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
 }
-
 function openEditNode(nodeId){
+  if(IS_VIEWER) return;
   const node = state.nodes.find(n => n.id === nodeId);
   if(!node) return;
   _nodeModal = { mode: 'edit', parentId: null, editId: nodeId };
-  document.getElementById('modal-title').textContent = 'Rename milestone';
+  document.getElementById('modal-node-title').textContent = 'Rename milestone';
   document.getElementById('modal-label-input').value = node.label;
   document.getElementById('modal-confirm-btn').textContent = 'Save';
   openModal('modal-node');
   setTimeout(() => document.getElementById('modal-label-input').focus(), 80);
 }
 
-// Single confirm handler — reads _nodeModal to know what to do
 function confirmNode(){
+  if(IS_VIEWER) return;
   const label = document.getElementById('modal-label-input').value.trim();
   if(!label) return;
-
   const { mode, parentId, editId } = _nodeModal;
-
   if(mode === 'edit'){
     const node = state.nodes.find(n => n.id === editId);
     if(node) node.label = label;
   } else {
-    // 'add-major' → parentId is null; 'add-sub' → parentId is set
     state.nodes.push({
-      id: _nextId++,
-      label,
+      id: _nextId++, label,
       parentId: mode === 'add-sub' ? parentId : null,
-      done: false,
-      doneDate: null,
-      collapsed: false
+      done: false, doneDate: null, collapsed: false
     });
   }
-
-  saveState();
-  render();
+  stashLocal(); markDirty(); render();
   closeModal('modal-node');
 }
 
-// Wire up the confirm button and Enter key once — no re-assignment needed
 document.getElementById('modal-confirm-btn').addEventListener('click', confirmNode);
 document.getElementById('modal-label-input').addEventListener('keydown', e => {
   if(e.key === 'Enter') confirmNode();
   if(e.key === 'Escape') closeModal('modal-node');
 });
 
-// ── RENAME PROJECT ─────────────────────────────
+// ─────────────────────────────────────────────
+// RENAME PROJECT
+// ─────────────────────────────────────────────
 function openRenameProject(){
+  if(IS_VIEWER) return;
   document.getElementById('modal-project-input').value = state.projectName;
   openModal('modal-project');
   setTimeout(() => document.getElementById('modal-project-input').focus(), 80);
@@ -696,7 +889,7 @@ function confirmRenameProject(){
   if(val){
     state.projectName = val;
     document.getElementById('project-title-display').textContent = val;
-    saveState();
+    stashLocal(); markDirty();
   }
   closeModal('modal-project');
 }
@@ -705,14 +898,17 @@ document.getElementById('modal-project-input').addEventListener('keydown', e => 
   if(e.key === 'Escape') closeModal('modal-project');
 });
 
-// ── MARK DONE / UNDONE ─────────────────────────
+// ─────────────────────────────────────────────
+// MARK DONE / UNDONE
+// ─────────────────────────────────────────────
 let _dateNodeId = null;
 function toggleDone(nodeId){
+  if(IS_VIEWER) return;
   const node = state.nodes.find(n => n.id === nodeId);
   if(!node) return;
   if(node.done){
     node.done = false; node.doneDate = null;
-    saveState(); render();
+    stashLocal(); markDirty(); render();
   } else {
     _dateNodeId = nodeId;
     document.getElementById('modal-date-input').value = new Date().toISOString().split('T')[0];
@@ -720,51 +916,60 @@ function toggleDone(nodeId){
   }
 }
 function confirmDate(){
+  if(IS_VIEWER) return;
   const node = state.nodes.find(n => n.id === _dateNodeId);
   if(node){
     node.done = true;
     node.doneDate = document.getElementById('modal-date-input').value || new Date().toISOString().split('T')[0];
-    saveState(); render();
+    stashLocal(); markDirty(); render();
   }
   closeModal('modal-date');
 }
 
-// ── DELETE NODE ────────────────────────────────
+// ─────────────────────────────────────────────
+// DELETE NODE
+// ─────────────────────────────────────────────
 function deleteNode(nodeId){
+  if(IS_VIEWER) return;
   function collectIds(id){
     const kids = state.nodes.filter(n => n.parentId === id).map(n => n.id);
     return [id, ...kids.flatMap(collectIds)];
   }
   const toRemove = new Set(collectIds(nodeId));
   state.nodes = state.nodes.filter(n => !toRemove.has(n.id));
-  saveState(); render();
+  stashLocal(); markDirty(); render();
 }
 
-// ── COLLAPSE ───────────────────────────────────
+// ─────────────────────────────────────────────
+// COLLAPSE
+// ─────────────────────────────────────────────
 function toggleCollapse(nodeId){
   const node = state.nodes.find(n => n.id === nodeId);
   if(!node) return;
   node.collapsed = !node.collapsed;
-  saveState(); render();
+  // Collapse state is a UI preference — stash locally but don't mark dirty
+  stashLocal();
+  render();
 }
 
-// ── NOTES PANEL TOGGLE ─────────────────────────
+// ─────────────────────────────────────────────
+// NOTES
+// ─────────────────────────────────────────────
 function toggleNotesPanel(){
   const panel = document.getElementById('notes-panel');
   const btn   = document.getElementById('notes-toggle-btn');
   const isCollapsed = panel.classList.toggle('collapsed');
   btn.classList.toggle('panel-collapsed', isCollapsed);
   state.notesPanelCollapsed = isCollapsed;
-  saveState();
-  // Redraw connectors after animation
+  stashLocal();
   setTimeout(drawConnectors, 360);
 }
 
-// ── NOTES ──────────────────────────────────────
 const notesEl = document.getElementById('notes-edit');
 notesEl.addEventListener('input', () => {
+  if(IS_VIEWER) return;
   state.notes = notesEl.value;
-  saveState();
+  stashLocal(); markDirty();
   if(document.getElementById('notes-preview').classList.contains('visible')) renderPreview();
 });
 
@@ -786,7 +991,9 @@ function renderPreview(){
   document.getElementById('notes-preview').innerHTML = marked.parse(state.notes || '');
 }
 
-// ── RENDER TREE ────────────────────────────────
+// ─────────────────────────────────────────────
+// RENDER TREE
+// ─────────────────────────────────────────────
 function render(){
   const root = document.getElementById('tree-root');
   const majorNodes = state.nodes.filter(n => n.parentId === null);
@@ -799,24 +1006,21 @@ function render(){
     const emp = document.createElement('div');
     emp.className = 'empty-state';
     emp.innerHTML = '<div style="font-size:28px;opacity:.3">⬡</div><div>No milestones yet</div>';
-    const btn = document.createElement('button');
-    btn.className = 'btn btn-accent';
-    btn.style.opacity = '1';
-    btn.textContent = '+ Add first milestone';
-    btn.onclick = openAddMajor;
-    emp.appendChild(btn);
+    if(!IS_VIEWER){
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-accent';
+      btn.style.opacity = '1';
+      btn.textContent = '+ Add first milestone';
+      btn.onclick = openAddMajor;
+      emp.appendChild(btn);
+    }
     root.appendChild(emp);
-    updateProgress();
-    drawConnectors();
-    return;
+    updateProgress(); drawConnectors(); return;
   }
 
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex;flex-direction:column;gap:0;width:max-content';
-
-  for(const major of majorNodes){
-    wrap.appendChild(buildRow(major, 0));
-  }
+  for(const major of majorNodes) wrap.appendChild(buildRow(major, 0));
   root.appendChild(wrap);
 
   updateProgress();
@@ -827,7 +1031,6 @@ function buildRow(node, depth){
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;align-items:flex-start;';
   row.dataset.rowId = node.id;
-
   row.appendChild(createNodeEl(node, depth));
 
   const children = state.nodes.filter(n => n.parentId === node.id);
@@ -841,12 +1044,9 @@ function buildRow(node, depth){
     childCol.classList.add('children');
     if(node.collapsed) childCol.classList.add('collapsed');
 
-    for(const child of children){
-      childCol.appendChild(buildRow(child, depth + 1));
-    }
+    for(const child of children) childCol.appendChild(buildRow(child, depth + 1));
     row.appendChild(childCol);
   }
-
   return row;
 }
 
@@ -869,18 +1069,18 @@ function createNodeEl(node, depth){
   const check = document.createElement('div');
   check.className = 'node-check';
   if(node.done){
-    check.innerHTML = '<svg class="check-mark" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 4L3 6.5L7 1.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    check.innerHTML = '<svg class="check-mark" viewBox="0 0 8 8" fill="none"><path d="M1 4L3 6.5L7 1.5" stroke="#080808" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   }
-  check.addEventListener('click', e => { e.stopPropagation(); toggleDone(node.id); });
+  if(!IS_VIEWER){
+    check.addEventListener('click', e => { e.stopPropagation(); toggleDone(node.id); });
+  }
   nodeDiv.appendChild(check);
 
-  // Label
   const label = document.createElement('span');
   label.className = 'node-label';
   label.textContent = node.label;
   nodeDiv.appendChild(label);
 
-  // Collapse arrow
   if(hasChildren){
     const arrow = document.createElement('span');
     arrow.className = 'collapse-arrow';
@@ -894,7 +1094,6 @@ function createNodeEl(node, depth){
 
   wrap.appendChild(nodeDiv);
 
-  // Done date
   if(node.done && node.doneDate){
     const dateEl = document.createElement('span');
     dateEl.className = 'node-done-date';
@@ -902,25 +1101,26 @@ function createNodeEl(node, depth){
     wrap.appendChild(dateEl);
   }
 
-  // Show shared toolbar on hover
-  wrap.addEventListener('mouseenter', e => showToolbar(node.id, wrap));
-  wrap.addEventListener('mouseleave', e => {
-    // delay hide so moving into toolbar doesn't close it
-    _toolbarHideTimer = setTimeout(hideToolbar, 120);
-  });
+  // Toolbar only in owner mode
+  if(!IS_VIEWER){
+    wrap.addEventListener('mouseenter', () => showToolbar(node.id, wrap));
+    wrap.addEventListener('mouseleave', () => {
+      _toolbarHideTimer = setTimeout(hideToolbar, 120);
+    });
+  }
 
   return wrap;
 }
 
-// ── SHARED NODE TOOLBAR ────────────────────────
+// ─────────────────────────────────────────────
+// NODE TOOLBAR (owner only)
+// ─────────────────────────────────────────────
 let _toolbarNodeId = null;
 let _toolbarHideTimer = null;
 
 const toolbar = document.getElementById('node-toolbar');
 toolbar.addEventListener('mouseenter', () => clearTimeout(_toolbarHideTimer));
-toolbar.addEventListener('mouseleave', () => {
-  _toolbarHideTimer = setTimeout(hideToolbar, 120);
-});
+toolbar.addEventListener('mouseleave', () => { _toolbarHideTimer = setTimeout(hideToolbar, 120); });
 
 document.getElementById('tb-add').addEventListener('click', e => {
   e.stopPropagation();
@@ -938,28 +1138,29 @@ document.getElementById('tb-del').addEventListener('click', e => {
 });
 
 function showToolbar(nodeId, wrapEl){
+  if(IS_VIEWER) return;
   clearTimeout(_toolbarHideTimer);
   _toolbarNodeId = nodeId;
   const r = wrapEl.getBoundingClientRect();
   toolbar.classList.add('visible');
-  // Position right of node, vertically centred
   toolbar.style.left = (r.right + 8) + 'px';
   toolbar.style.top  = (r.top + r.height / 2 - 16) + 'px';
 }
-
 function hideToolbar(){
   toolbar.classList.remove('visible');
   _toolbarNodeId = null;
 }
 
-// ── SVG CONNECTORS ─────────────────────────────
+// ─────────────────────────────────────────────
+// SVG CONNECTORS
+// ─────────────────────────────────────────────
 function drawConnectors(){
   const svg = document.getElementById('connector-svg');
   const panel = document.getElementById('tree-panel');
   svg.innerHTML = '';
   const panelRect = panel.getBoundingClientRect();
-
   const positions = {};
+
   document.querySelectorAll('.node[data-node-id]').forEach(el => {
     const nid = parseInt(el.dataset.nodeId);
     const r = el.getBoundingClientRect();
@@ -977,21 +1178,20 @@ function drawConnectors(){
     const p = positions[parent.id];
     const c = positions[node.id];
     if(!p || !c) return;
-
-    const x1 = p.right, y1 = p.cy;
-    const x2 = c.left,  y2 = c.cy;
+    const x1 = p.right, y1 = p.cy, x2 = c.left, y2 = c.cy;
     const mx = (x1 + x2) / 2;
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const path = document.createElementNS('http://www.w3.org/2000/svg','path');
     path.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
-    path.setAttribute('fill', 'none');
+    path.setAttribute('fill','none');
     path.setAttribute('stroke', node.done ? 'rgba(52,211,120,0.3)' : 'rgba(255,255,255,0.10)');
-    path.setAttribute('stroke-width', '1');
+    path.setAttribute('stroke-width','1');
     svg.appendChild(path);
   });
 }
 
-// ── PROGRESS ───────────────────────────────────
+// ─────────────────────────────────────────────
+// PROGRESS
+// ─────────────────────────────────────────────
 function updateProgress(){
   const all  = state.nodes.length;
   const done = state.nodes.filter(n => n.done).length;
@@ -1000,43 +1200,78 @@ function updateProgress(){
   document.getElementById('progress-label').textContent = `${done} / ${all} done`;
 }
 
-// ── UTILS ──────────────────────────────────────
-function formatDate(str){
-  if(!str) return '';
-  const [y, m, d] = str.split('-');
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d} ${months[parseInt(m) - 1]} ${y}`;
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, type=''){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show' + (type ? ' toast-'+type : '');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
 }
 
-// ── INIT ───────────────────────────────────────
+// ─────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────
+function formatDate(str){
+  if(!str) return '';
+  const [y,m,d] = str.split('-');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${d} ${months[parseInt(m)-1]} ${y}`;
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
 window.addEventListener('resize', drawConnectors);
 document.getElementById('tree-panel').addEventListener('scroll', drawConnectors);
 
 (async () => {
-  // Always load local cache first so the page isn't blank while we fetch
-  loadLocalState();
-  render();
+  buildHeader();
 
-  if(state.notesPanelCollapsed){
-    document.getElementById('notes-panel').classList.add('collapsed');
-    document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
-  }
-
-  if(hasConfig()){
-    setSyncStatus('saving', 'loading…');
-    const pulled = await pullFromGithub();
-    if(pulled){
-      setSyncStatus('ok', 'loaded');
-      render();  // re-render with fresh remote data
-      if(state.notesPanelCollapsed){
-        document.getElementById('notes-panel').classList.add('collapsed');
-        document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
-      }
+  if(IS_VIEWER){
+    // Viewer: load data from public raw GitHub
+    document.getElementById('project-title-display').textContent = 'Loading…';
+    const r = await githubPull();
+    if(r.ok){
+      render();
     } else {
-      // pullFromGithub sets its own status on error; if 404 it sets 'ready'
+      document.getElementById('project-title-display').textContent = 'Error';
+      showToast(r.msg, 'err');
+      document.getElementById('tree-root').innerHTML =
+        `<div class="empty-state" style="opacity:1;color:#ff6060;text-align:center;padding:40px;">
+          <div style="font-size:28px">✕</div>
+          <div>${r.msg}</div>
+          <div style="font-size:11px;margin-top:8px;opacity:.6">Make sure the repository is public.</div>
+        </div>`;
     }
   } else {
-    setSyncStatus('idle', 'no config');
+    // Owner: load local cache first so page isn't blank
+    loadLocal();
+    render();
+    markClean();
+
+    if(state.notesPanelCollapsed){
+      document.getElementById('notes-panel').classList.add('collapsed');
+      document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
+    }
+
+    // Then try to pull fresh data from GitHub
+    if(hasConfig()){
+      const r = await githubPull();
+      if(r.ok && !r.fresh){
+        render();
+        markClean();
+        if(state.notesPanelCollapsed){
+          document.getElementById('notes-panel').classList.add('collapsed');
+          document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
+        }
+      } else if(!r.ok){
+        showToast('Could not load from GitHub: ' + r.msg, 'err');
+      }
+    }
   }
 })();
 </script>
