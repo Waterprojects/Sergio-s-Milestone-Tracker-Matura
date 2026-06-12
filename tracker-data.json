@@ -1,0 +1,31 @@
+{
+  "projectName": "Project Tracker",
+  "nodes": [
+    {
+      "id": 1,
+      "label": "Phase 1 - Outlining",
+      "parentId": null,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "label": "Phase 2 - Collecting Data",
+      "parentId": null,
+      "done": true,
+      "doneDate": "2026-06-12",
+      "collapsed": false
+    },
+    {
+      "id": 3,
+      "label": "Phase 3 - Analysing",
+      "parentId": null,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    }
+  ],
+  "notes": "",
+  "notesPanelCollapsed": false
+}
