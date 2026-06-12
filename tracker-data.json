@@ -13,8 +13,8 @@
       "id": 2,
       "label": "Phase 2 - Collecting Data",
       "parentId": null,
-      "done": true,
-      "doneDate": "2026-06-12",
+      "done": false,
+      "doneDate": null,
       "collapsed": false
     },
     {
