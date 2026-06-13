@@ -5,8 +5,8 @@
       "id": 1,
       "label": "Phase 1 - Outlining",
       "parentId": null,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-06-12",
       "collapsed": false
     },
     {
@@ -26,6 +26,6 @@
       "collapsed": false
     }
   ],
-  "notes": "",
+  "notes": "aby",
   "notesPanelCollapsed": false
 }
