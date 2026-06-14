@@ -24,7 +24,16 @@
       "done": false,
       "doneDate": null,
       "collapsed": false
+    },
+    {
+      "id": 4,
+      "label": "jijjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk",
+      "parentId": 2,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
     }
   ],
-  "notesPanelCollapsed": false
+  "notesPanelCollapsed": false,
+  "notes": "<div><br></div><font size=\"6\"><b><u>a</u></b></font><br><div><br></div><font size=\"6\"><b>a</b></font>"
 }
