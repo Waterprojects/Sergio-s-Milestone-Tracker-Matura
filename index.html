@@ -151,10 +151,9 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   cursor:pointer;
   transition:background .2s,border-color .2s,transform .15s;
   position:relative;
-  white-space:normal;
-  word-break:break-word;
+  white-space:nowrap;
   user-select:none;
-  min-width:140px;
+  min-width:140px;max-width:220px;
 }
 .node::before{
   content:'';position:absolute;inset:0;
@@ -166,7 +165,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .node.done{background:var(--glass-done);border-color:var(--glass-done-border);}
 .node.done::before{background:linear-gradient(135deg,rgba(52,211,120,0.12) 0%,transparent 60%);}
 .node.done .node-label{color:var(--accent)}
-.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;word-break:break-word;}
+.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;}
 .node-check{
   width:16px;height:16px;border-radius:50%;
   border:1.5px solid rgba(255,255,255,0.2);
@@ -247,14 +246,6 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 }
 .notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
-.notes-toggle.panel-collapsed{
-  color:var(--accent);
-  border-color:var(--glass-done-border);
-  background:var(--accent-dim);
-  box-shadow:0 0 10px rgba(52,211,120,0.3),0 0 0 1px rgba(52,211,120,0.15);
-  width:22px;
-  height:52px;
-}
 .notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
 .notes-panel{
@@ -848,12 +839,24 @@ async function githubPush(){
 
 async function githubPull(){
   if(IS_VIEWER){
+    // Use the GitHub Contents API instead of raw.githubusercontent.com.
+    // The raw CDN ignores query-string cache-busters and can serve stale
+    // content for minutes. The API always returns the current committed file.
     const [owner, repo, branch] = _viewParam.split('/');
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${DATA_PATH}?t=${Date.now()}`;
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${DATA_PATH}?ref=${branch}`;
     try{
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers:{
+          'Accept': 'application/vnd.github.v3+json',
+          'Cache-Control': 'no-cache',
+        }
+      });
       if(!res.ok) return { ok: false, msg: `Could not load data (${res.status}). Is the repo public?` };
-      state = await res.json();
+      const data = await res.json();
+      // API returns base64-encoded content — decode it
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/
+/g,''))));
+      state = JSON.parse(decoded);
       _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
       return { ok: true };
     } catch(e){
@@ -930,18 +933,11 @@ function buildHeader(){
       btnRefresh.textContent = '↻ Refresh';
     };
     actions.appendChild(btnRefresh);
-    // Disable editor in viewer mode — show preview only, hide tabs + toolbar
+    // Disable editor in viewer mode
     const editor = document.getElementById('notes-edit');
     editor.contentEditable = 'false';
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
-    // Hide edit/preview tab buttons so viewer only sees rendered notes
-    const tabEdit = document.getElementById('tab-edit');
-    const tabPrev = document.getElementById('tab-preview');
-    if(tabEdit) tabEdit.style.display = 'none';
-    if(tabPrev) tabPrev.style.display = 'none';
-    // Switch straight to preview
-    setTimeout(() => switchTab('preview'), 50);
   } else {
     const statusEl = document.createElement('span');
     statusEl.id = 'save-status';
