@@ -280,9 +280,14 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   border-bottom:0.5px solid var(--glass-border);
   background:rgba(255,255,255,0.02);
   flex-shrink:0;
-  min-width:340px;
+  min-width:0;
 }
 .rich-toolbar.hidden{display:none;}
+.rich-toolbar.toolbar-collapsed .rt-hide{display:none;}
+.rich-toolbar.toolbar-collapsed{padding:4px 8px;}
+#rt-collapse-btn{margin-left:auto;flex-shrink:0;opacity:.45;transition:opacity .15s;}
+#rt-collapse-btn:hover{opacity:1;}
+.rich-toolbar.toolbar-collapsed #rt-collapse-btn svg{transform:rotate(180deg);}
 .rt-btn{
   width:26px;height:26px;border-radius:5px;
   background:transparent;border:none;
@@ -477,14 +482,14 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
     <!-- Rich text formatting toolbar -->
     <div class="rich-toolbar" id="rich-toolbar">
       <!-- Font family -->
-      <select class="rt-select" id="rt-font" title="Font" onchange="rtExec('fontName', this.value)">
+      <select class="rt-select rt-hide" id="rt-font" title="Font" onchange="rtExec('fontName', this.value)">
         <option value="DM Mono, monospace">Mono</option>
         <option value="DM Sans, sans-serif">Sans</option>
         <option value="Georgia, serif">Serif</option>
       </select>
 
       <!-- Font size -->
-      <select class="rt-select" id="rt-size" title="Size" onchange="rtExec('fontSize', this.value)" style="width:46px;">
+      <select class="rt-select rt-hide" id="rt-size" title="Size" onchange="rtExec('fontSize', this.value)" style="width:46px;">
         <option value="1">10</option>
         <option value="2">13</option>
         <option value="3" selected>16</option>
@@ -493,18 +498,18 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
         <option value="6">32</option>
       </select>
 
-      <div class="rt-sep"></div>
+      <div class="rt-sep rt-hide"></div>
 
-      <!-- Bold, Italic, Underline, Strikethrough -->
-      <button class="rt-btn" id="rt-bold"   title="Bold (Ctrl+B)"      onmousedown="e=>e.preventDefault()" onclick="rtToggle('bold')"><b>B</b></button>
-      <button class="rt-btn" id="rt-italic" title="Italic (Ctrl+I)"    onclick="rtToggle('italic')"><i>I</i></button>
-      <button class="rt-btn" id="rt-under"  title="Underline (Ctrl+U)" onclick="rtToggle('underline')"><u>U</u></button>
-      <button class="rt-btn" id="rt-strike" title="Strikethrough"       onclick="rtToggle('strikeThrough')"><s>S</s></button>
+      <!-- Bold, Italic, Underline, Strikethrough — NO inline onmousedown -->
+      <button class="rt-btn rt-hide" id="rt-bold"   title="Bold (Ctrl+B)"      onclick="rtToggle('bold')" style="font-size:15px;font-weight:900;letter-spacing:-.5px;">B</button>
+      <button class="rt-btn rt-hide" id="rt-italic" title="Italic (Ctrl+I)"    onclick="rtToggle('italic')"><i>I</i></button>
+      <button class="rt-btn rt-hide" id="rt-under"  title="Underline (Ctrl+U)" onclick="rtToggle('underline')"><u>U</u></button>
+      <button class="rt-btn rt-hide" id="rt-strike" title="Strikethrough"       onclick="rtToggle('strikeThrough')"><s>S</s></button>
 
-      <div class="rt-sep"></div>
+      <div class="rt-sep rt-hide"></div>
 
       <!-- Text color -->
-      <div class="rt-color-wrap" title="Text color">
+      <div class="rt-color-wrap rt-hide" title="Text color">
         <button class="rt-color-btn" onclick="document.getElementById('rt-color-input').click()">
           <div class="rt-color-swatch" id="rt-color-swatch"></div>
         </button>
@@ -513,7 +518,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
       </div>
 
       <!-- Highlight color -->
-      <div class="rt-color-wrap" title="Highlight color">
+      <div class="rt-color-wrap rt-hide" title="Highlight color">
         <button class="rt-color-btn" onclick="document.getElementById('rt-highlight-input').click()">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="pointer-events:none">
             <rect x="2" y="2" width="10" height="7" rx="1.5" fill="currentColor" opacity=".4"/>
@@ -524,33 +529,38 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
                oninput="rtExec('hiliteColor', this.value);">
       </div>
 
-      <div class="rt-sep"></div>
+      <div class="rt-sep rt-hide"></div>
 
       <!-- Alignment -->
-      <button class="rt-btn" title="Align left"   onclick="rtExec('justifyLeft')">
+      <button class="rt-btn rt-hide" title="Align left"   onclick="rtExec('justifyLeft')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><rect x="0" y="0" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="0" y="4" width="8" height="1.5" rx=".75" fill="currentColor"/><rect x="0" y="8" width="10" height="1.5" rx=".75" fill="currentColor"/></svg>
       </button>
-      <button class="rt-btn" title="Center"       onclick="rtExec('justifyCenter')">
+      <button class="rt-btn rt-hide" title="Center"       onclick="rtExec('justifyCenter')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><rect x="0" y="0" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="2" y="4" width="8" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="8" width="10" height="1.5" rx=".75" fill="currentColor"/></svg>
       </button>
-      <button class="rt-btn" title="Align right"  onclick="rtExec('justifyRight')">
+      <button class="rt-btn rt-hide" title="Align right"  onclick="rtExec('justifyRight')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><rect x="0" y="0" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="4" y="4" width="8" height="1.5" rx=".75" fill="currentColor"/><rect x="2" y="8" width="10" height="1.5" rx=".75" fill="currentColor"/></svg>
       </button>
 
-      <div class="rt-sep"></div>
+      <div class="rt-sep rt-hide"></div>
 
       <!-- Lists -->
-      <button class="rt-btn" title="Bullet list"   onclick="rtExec('insertUnorderedList')">
+      <button class="rt-btn rt-hide" title="Bullet list"   onclick="rtExec('insertUnorderedList')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><circle cx="1.5" cy="1.5" r="1" fill="currentColor"/><rect x="4" y="0.75" width="8" height="1.5" rx=".75" fill="currentColor"/><circle cx="1.5" cy="5" r="1" fill="currentColor"/><rect x="4" y="4.25" width="8" height="1.5" rx=".75" fill="currentColor"/><circle cx="1.5" cy="8.5" r="1" fill="currentColor"/><rect x="4" y="7.75" width="8" height="1.5" rx=".75" fill="currentColor"/></svg>
       </button>
-      <button class="rt-btn" title="Numbered list" onclick="rtExec('insertOrderedList')">
+      <button class="rt-btn rt-hide" title="Numbered list" onclick="rtExec('insertOrderedList')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><text x="0" y="3" font-size="4" fill="currentColor" font-family="monospace">1.</text><rect x="5" y="0.75" width="7" height="1.5" rx=".75" fill="currentColor"/><text x="0" y="7" font-size="4" fill="currentColor" font-family="monospace">2.</text><rect x="5" y="5.25" width="7" height="1.5" rx=".75" fill="currentColor"/></svg>
       </button>
 
-      <div class="rt-sep"></div>
+      <div class="rt-sep rt-hide"></div>
 
       <!-- Clear formatting -->
-      <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
+      <button class="rt-btn rt-hide" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
+
+      <!-- Collapse toggle — always visible -->
+      <button class="rt-btn" id="rt-collapse-btn" title="Collapse toolbar" onclick="toggleRichToolbar()">
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
 
     <div class="notes-body">
@@ -660,44 +670,110 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
 <script>
 // ─────────────────────────────────────────────
-// RICH TEXT HELPERS
+// RICH TEXT TOOLBAR
 // ─────────────────────────────────────────────
-function rtExec(cmd, value){
-  // execCommand needs the editor to be focused
+// The single most important rule: NEVER call element.focus() before
+// execCommand. Doing so makes the browser forget whether selected text
+// is bold/italic/etc, so toggles always apply instead of removing.
+//
+// How selection is preserved:
+//   - The toolbar div intercepts mousedown with preventDefault().
+//     This stops the browser moving focus out of the editor.
+//   - For color/select inputs which need real focus, we save the
+//     Range object before they open and restore it on change.
+// ─────────────────────────────────────────────
+
+(function(){
   const editor = document.getElementById('notes-edit');
-  editor.focus();
-  document.execCommand(cmd, false, value || null);
-  updateToolbarState();
-  onNotesChange();
-}
+  const toolbar = document.getElementById('rich-toolbar');
 
-function rtToggle(cmd){
-  rtExec(cmd);
-}
+  // ── Saved range (for color pickers / selects that steal focus) ──
+  let _savedRange = null;
 
-// Reflect active bold/italic/etc in toolbar buttons
-function updateToolbarState(){
-  ['bold','italic','underline','strikeThrough'].forEach(cmd => {
-    const id = {bold:'rt-bold',italic:'rt-italic',underline:'rt-under',strikeThrough:'rt-strike'}[cmd];
-    const el = document.getElementById(id);
-    if(el) el.classList.toggle('active', document.queryCommandState(cmd));
-  });
-}
-
-document.getElementById('notes-edit').addEventListener('keyup', updateToolbarState);
-document.getElementById('notes-edit').addEventListener('mouseup', updateToolbarState);
-document.getElementById('notes-edit').addEventListener('selectionchange', updateToolbarState);
-document.addEventListener('selectionchange', () => {
-  if(document.activeElement === document.getElementById('notes-edit')) updateToolbarState();
-});
-
-// Prevent toolbar button clicks from stealing editor focus/selection
-document.getElementById('rich-toolbar').addEventListener('mousedown', e => {
-  // Only prevent default for buttons, not color inputs
-  if(e.target.type !== 'color' && !e.target.closest('select') && !e.target.closest('input[type=color]')){
-    e.preventDefault();
+  function saveRange(){
+    const sel = window.getSelection();
+    if(sel && sel.rangeCount > 0){
+      _savedRange = sel.getRangeAt(0).cloneRange();
+    }
   }
-});
+
+  function restoreRange(){
+    if(!_savedRange) return;
+    // Only restore if editor doesn't already have the correct focus
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(_savedRange);
+  }
+
+  // ── Core execute — never focuses editor ──
+  window.rtExec = function(cmd, value){
+    // Restore range for dropdowns/color (they lose the selection)
+    restoreRange();
+    document.execCommand(cmd, false, value !== undefined && value !== null ? value : null);
+    // Re-save after command (selection may have shifted)
+    saveRange();
+    updateToolbarState();
+    onNotesChange();
+  };
+
+  window.rtToggle = function(cmd){ window.rtExec(cmd); };
+
+  // ── Collapsible toolbar ──
+  window.toggleRichToolbar = function(){
+    toolbar.classList.toggle('toolbar-collapsed');
+    try{ localStorage.setItem('pt_tb_col', toolbar.classList.contains('toolbar-collapsed')?'1':''); }catch(e){}
+  };
+
+  // ── Toolbar state sync ──
+  function updateToolbarState(){
+    // Toggle buttons
+    [{cmd:'bold',id:'rt-bold'},{cmd:'italic',id:'rt-italic'},
+     {cmd:'underline',id:'rt-under'},{cmd:'strikeThrough',id:'rt-strike'}
+    ].forEach(({cmd,id}) => {
+      const el = document.getElementById(id);
+      if(el) el.classList.toggle('active', document.queryCommandState(cmd));
+    });
+    // Font size dropdown
+    const sizeEl = document.getElementById('rt-size');
+    if(sizeEl){ const v = document.queryCommandValue('fontSize'); if(v) sizeEl.value = v; }
+    // Font family dropdown
+    const fontEl = document.getElementById('rt-font');
+    if(fontEl){ const v = document.queryCommandValue('fontName'); if(v){
+      Array.from(fontEl.options).forEach(o => {
+        if(v.replace(/['"]/g,'').includes(o.value.split(',')[0].replace(/['"]/g,'').trim()))
+          fontEl.value = o.value;
+      });
+    }}
+  }
+  window.updateToolbarState = updateToolbarState;
+
+  // ── Save range on every interaction inside editor ──
+  editor.addEventListener('mouseup',  saveRange);
+  editor.addEventListener('keyup',    saveRange);
+  editor.addEventListener('keydown',  saveRange);
+
+  // ── Update toolbar state when cursor/selection changes ──
+  editor.addEventListener('mouseup',  updateToolbarState);
+  editor.addEventListener('keyup',    updateToolbarState);
+  editor.addEventListener('focus',    updateToolbarState);
+  document.addEventListener('selectionchange', () => {
+    if(document.activeElement === editor) updateToolbarState();
+  });
+
+  // ── CRITICAL: stop ALL toolbar interactions stealing focus ──
+  // preventDefault on mousedown keeps focus in the editor.
+  // We use a capturing listener so it fires before anything else.
+  toolbar.addEventListener('mousedown', function(e){
+    // Color inputs and selects need to open natively — save range first
+    if(e.target.closest('input[type=color]') || e.target.closest('select')){
+      saveRange();
+      return; // let them open normally
+    }
+    // Everything else: block focus theft
+    e.preventDefault();
+  }, true); // capturing phase
+
+})();
 
 // ─────────────────────────────────────────────
 // MODE DETECTION
@@ -1423,6 +1499,7 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
 
 (async () => {
   buildHeader();
+  try{ if(localStorage.getItem('pt_tb_col')) document.getElementById('rich-toolbar').classList.add('toolbar-collapsed'); }catch(e){}
 
   if(IS_VIEWER){
     document.getElementById('project-title-display').textContent = 'Loading…';
