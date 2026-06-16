@@ -34,22 +34,6 @@
       "collapsed": false
     },
     {
-      "id": 7,
-      "label": "dfdf",
-      "parentId": 4,
-      "done": true,
-      "doneDate": "2026-06-16",
-      "collapsed": false
-    },
-    {
-      "id": 8,
-      "label": "fdfdf",
-      "parentId": 4,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
       "id": 10,
       "label": "fddsfdsf",
       "parentId": 2,
