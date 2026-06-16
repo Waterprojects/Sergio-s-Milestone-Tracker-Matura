@@ -452,6 +452,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 <div class="viewer-banner" id="viewer-banner">
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5V8.5M6 3.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
   View-only mode — you're seeing a live snapshot. No edits can be made.
+  <button onclick="document.getElementById('viewer-banner').classList.remove('visible')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:0.6;padding:0 2px;font-size:14px;line-height:1;" title="Dismiss">✕</button>
 </div>
 
 <div class="main">
@@ -982,6 +983,7 @@ function buildHeader(){
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
     document.querySelector('.notes-tabs').style.display = 'none';
+    document.querySelector('.notes-header .icon-btn').style.display = 'none';
     switchTab('preview');
   } else {
     const statusEl = document.createElement('span');
