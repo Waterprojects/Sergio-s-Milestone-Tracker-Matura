@@ -1547,6 +1547,10 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
       } else if(!r.ok){
         showToast('Could not load from GitHub: ' + r.msg, 'err');
       }
+    } else {
+      // No config in this browser — show a non-blocking prompt so the user knows
+      // they need to enter config to sync from GitHub (especially on a new device/browser)
+      showToast('No config yet — open ⚙ Config to connect GitHub and load your data.', 'err');
     }
   }
 })();
