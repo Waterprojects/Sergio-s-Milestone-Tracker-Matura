@@ -37,8 +37,8 @@
       "id": 7,
       "label": "dfdf",
       "parentId": 4,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-06-16",
       "collapsed": false
     },
     {
@@ -50,25 +50,9 @@
       "collapsed": false
     },
     {
-      "id": 9,
-      "label": "dfdfdf",
-      "parentId": 7,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
       "id": 10,
       "label": "fddsfdsf",
       "parentId": 2,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 11,
-      "label": "ads",
-      "parentId": 9,
       "done": false,
       "doneDate": null,
       "collapsed": false
