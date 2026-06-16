@@ -796,45 +796,51 @@ async function githubPush(){
   if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
 
   const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
+  const authHeader = { 'Authorization': `token ${cfg.token}` };
 
-  let sha = null;
-  try{
-    const res = await fetch(`${apiBase}?ref=${cfg.branch}`, {
-      headers:{ 'Authorization': `token ${cfg.token}` }
-    });
-    if(res.ok){
-      const data = await res.json();
-      sha = data.sha;
-    } else if(res.status !== 404){
-      const txt = await res.text();
-      return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,120)}` };
-    }
-  } catch(e){
-    return { ok: false, msg: 'Network error reading file: ' + e.message };
+  // Always fetch the freshest SHA (bypass cache with timestamp)
+  async function fetchSha(){
+    const r = await fetch(`${apiBase}?ref=${cfg.branch}&t=${Date.now()}`, { headers: authHeader });
+    if(r.ok){ const d = await r.json(); return { sha: d.sha, ok: true }; }
+    if(r.status === 404) return { sha: null, ok: true };
+    return { sha: null, ok: false, status: r.status };
   }
 
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
-  const body = {
-    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
-    content,
-    branch: cfg.branch,
-  };
-  if(sha) body.sha = sha;
-
-  try{
-    const res = await fetch(apiBase, {
+  // Attempt a single PUT with the given SHA
+  async function attemptPut(sha){
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+    const body = {
+      message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+      content,
+      branch: cfg.branch,
+    };
+    if(sha) body.sha = sha;
+    return fetch(apiBase, {
       method: 'PUT',
-      headers:{
-        'Authorization': `token ${cfg.token}`,
-        'Content-Type':  'application/json',
-      },
+      headers: { ...authHeader, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  }
+
+  try{
+    // First attempt with a fresh SHA
+    const shaResult = await fetchSha();
+    if(!shaResult.ok) return { ok: false, msg: `GitHub error ${shaResult.status} fetching file SHA.` };
+
+    let res = await attemptPut(shaResult.sha);
+
+    // 409 = SHA conflict — re-fetch the very latest SHA and retry once automatically
+    if(res.status === 409){
+      const retry = await fetchSha();
+      if(!retry.ok) return { ok: false, msg: 'SHA conflict and could not re-fetch SHA to retry.' };
+      res = await attemptPut(retry.sha);
+    }
+
     if(res.ok) return { ok: true };
     const txt = await res.text();
     return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,200)}` };
   } catch(e){
-    return { ok: false, msg: 'Network error writing file: ' + e.message };
+    return { ok: false, msg: 'Network error: ' + e.message };
   }
 }
 
@@ -1376,11 +1382,27 @@ function drawConnectors(){
     };
   });
 
+  // Build a quick lookup map for nodes
+  const nodeMap = {};
+  state.nodes.forEach(n => { nodeMap[n.id] = n; });
+
+  // Walk up the ancestor chain — returns true if any ancestor is collapsed
+  function isHiddenByAncestor(node){
+    let cur = node;
+    while(cur.parentId !== null){
+      const parent = nodeMap[cur.parentId];
+      if(!parent) break;
+      if(parent.collapsed) return true;
+      cur = parent;
+    }
+    return false;
+  }
+
   state.nodes.forEach(node => {
     if(node.parentId === null) return;
-    const parent = state.nodes.find(n => n.id === node.parentId);
-    if(!parent || parent.collapsed) return;
-    const p = positions[parent.id];
+    // Skip if this node is hidden because any ancestor is collapsed
+    if(isHiddenByAncestor(node)) return;
+    const p = positions[node.parentId];
     const c = positions[node.id];
     if(!p || !c) return;
     const x1 = p.right, y1 = p.cy, x2 = c.left, y2 = c.cy;
