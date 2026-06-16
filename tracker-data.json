@@ -10,65 +10,9 @@
       "collapsed": false
     },
     {
-      "id": 2,
-      "label": "fdfdfdfdfdfdfPhase 2 - Collecting Datawreeddddddddddddddddddddddddddddddddddd",
-      "parentId": null,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
       "id": 3,
       "label": "Phase 3 - Analysing",
       "parentId": null,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 10,
-      "label": "fddsfdsf",
-      "parentId": 2,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 12,
-      "label": "i",
-      "parentId": 2,
-      "done": true,
-      "doneDate": "2026-06-16",
-      "collapsed": false
-    },
-    {
-      "id": 13,
-      "label": "dfds",
-      "parentId": 2,
-      "done": true,
-      "doneDate": "2026-06-16",
-      "collapsed": false
-    },
-    {
-      "id": 14,
-      "label": "dfd",
-      "parentId": 2,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 15,
-      "label": "fdfdfddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      "parentId": 2,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 16,
-      "label": "huhuhu8h8u",
-      "parentId": 2,
       "done": false,
       "doneDate": null,
       "collapsed": false
@@ -101,38 +45,6 @@
       "id": 20,
       "label": "uzhzuh",
       "parentId": 17,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 21,
-      "label": "sdcdsfdsfdsfdfdf",
-      "parentId": 10,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 22,
-      "label": "dfdfdfdfd",
-      "parentId": 21,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 23,
-      "label": "fdfdfdfdfd",
-      "parentId": 22,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 24,
-      "label": "dfdfdf",
-      "parentId": 23,
       "done": false,
       "doneDate": null,
       "collapsed": false
