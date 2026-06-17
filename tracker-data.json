@@ -11,7 +11,7 @@
     },
     {
       "id": 29,
-      "label": "Phase 2: Data Collection  (June - End of July)",
+      "label": "Phase 2: Data Collection  (June - July)",
       "parentId": null,
       "done": false,
       "doneDate": null,
@@ -106,25 +106,121 @@
       "collapsed": false
     },
     {
-      "id": 47,
-      "label": "Pilot Interview",
+      "id": 53,
+      "label": "Interviews",
       "parentId": 29,
       "done": false,
       "doneDate": null,
       "collapsed": false
     },
     {
-      "id": 48,
-      "label": "Conduct 1 interview",
-      "parentId": 47,
+      "id": 54,
+      "label": "Media Extraction",
+      "parentId": 29,
       "done": false,
       "doneDate": null,
       "collapsed": false
     },
     {
-      "id": 49,
-      "label": "Immediately transcribe and evaluate",
-      "parentId": 47,
+      "id": 55,
+      "label": "Pilot Interview",
+      "parentId": 53,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 56,
+      "label": "Conducting first interview",
+      "parentId": 55,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 57,
+      "label": "Transcribing and Evaluating",
+      "parentId": 55,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 58,
+      "label": "Requesting feedback",
+      "parentId": 55,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 59,
+      "label": "Potentially refining questions",
+      "parentId": 53,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 60,
+      "label": "Conducting remaining 3-5 interviews",
+      "parentId": 53,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 61,
+      "label": "Systematically save the relevant articles",
+      "parentId": 54,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 62,
+      "label": "Phase 3 Data Processing (August - September)",
+      "parentId": null,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 63,
+      "label": "Transcription",
+      "parentId": 62,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 64,
+      "label": "Developing the Codebook",
+      "parentId": 62,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 65,
+      "label": "Full Coding",
+      "parentId": 62,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 66,
+      "label": "Coding of Interviews",
+      "parentId": 65,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 67,
+      "label": "Coding of Media",
+      "parentId": 65,
       "done": false,
       "doneDate": null,
       "collapsed": false
