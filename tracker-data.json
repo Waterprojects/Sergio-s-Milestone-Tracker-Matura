@@ -3,23 +3,7 @@
   "nodes": [
     {
       "id": 1,
-      "label": "Phase 1 - Outlining",
-      "parentId": null,
-      "done": true,
-      "doneDate": "2026-06-16",
-      "collapsed": false
-    },
-    {
-      "id": 21,
-      "label": "DSSAD",
-      "parentId": null,
-      "done": false,
-      "doneDate": null,
-      "collapsed": false
-    },
-    {
-      "id": 28,
-      "label": "EDFD",
+      "label": "Phase 1: Outlining (May - Early June)",
       "parentId": null,
       "done": false,
       "doneDate": null,
@@ -27,7 +11,7 @@
     },
     {
       "id": 29,
-      "label": "DFDFD",
+      "label": "Phase 2: Data Collection & Coding (July – August)",
       "parentId": null,
       "done": false,
       "doneDate": null,
@@ -72,8 +56,56 @@
       "done": false,
       "doneDate": null,
       "collapsed": false
+    },
+    {
+      "id": 35,
+      "label": "Writing \"Introduction\"",
+      "parentId": 1,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 36,
+      "label": "Framing the goal of my work",
+      "parentId": 35,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 37,
+      "label": "Presenting my hypothesis",
+      "parentId": 35,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 38,
+      "label": "Introducing my methods",
+      "parentId": 35,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 39,
+      "label": "Writing \"Material and Methods\"",
+      "parentId": 1,
+      "done": false,
+      "doneDate": null,
+      "collapsed": true
+    },
+    {
+      "id": 40,
+      "label": "Defining exact media selection",
+      "parentId": 39,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
     }
   ],
-  "notesPanelCollapsed": false,
+  "notesPanelCollapsed": true,
   "notes": "<div><font size=\"6\" face=\"Georgia, serif\" color=\"#ff0000\"><u style=\"background-color: rgb(0, 255, 110);\"><i><b style=\"\">ALBERT</b> </i></u></font></div><div><br></div><div><br></div><div><br></div>"
 }
