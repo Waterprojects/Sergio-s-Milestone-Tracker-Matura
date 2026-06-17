@@ -11,7 +11,7 @@
     },
     {
       "id": 29,
-      "label": "Phase 2: Data Collection & Coding (June - End of July)",
+      "label": "Phase 2: Data Collection  (June - End of July)",
       "parentId": null,
       "done": false,
       "doneDate": null,
@@ -101,6 +101,14 @@
       "id": 45,
       "label": "Bibliography",
       "parentId": 42,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 47,
+      "label": "Pilot Interview",
+      "parentId": 29,
       "done": false,
       "doneDate": null,
       "collapsed": false
