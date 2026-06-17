@@ -179,7 +179,7 @@
     },
     {
       "id": 62,
-      "label": "Phase 3 Data Processing (August - September)",
+      "label": "Phase 3 Data Processing (August)",
       "parentId": null,
       "done": false,
       "doneDate": null,
@@ -221,6 +221,22 @@
       "id": 67,
       "label": "Coding of Media",
       "parentId": 65,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 68,
+      "label": "Phase 4 Data Analysis (September - October)",
+      "parentId": null,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 69,
+      "label": "Data Juxtaposition",
+      "parentId": 68,
       "done": false,
       "doneDate": null,
       "collapsed": false
