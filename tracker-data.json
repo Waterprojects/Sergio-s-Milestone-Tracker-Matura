@@ -95,7 +95,7 @@
       "parentId": 1,
       "done": false,
       "doneDate": null,
-      "collapsed": true
+      "collapsed": false
     },
     {
       "id": 40,
@@ -104,8 +104,16 @@
       "done": false,
       "doneDate": null,
       "collapsed": false
+    },
+    {
+      "id": 41,
+      "label": "drafting the core questions for the interviews",
+      "parentId": 39,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
     }
   ],
-  "notesPanelCollapsed": true,
+  "notesPanelCollapsed": false,
   "notes": "<div><font size=\"6\" face=\"Georgia, serif\" color=\"#ff0000\"><u style=\"background-color: rgb(0, 255, 110);\"><i><b style=\"\">ALBERT</b> </i></u></font></div><div><br></div><div><br></div><div><br></div>"
 }
