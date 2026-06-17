@@ -112,6 +112,22 @@
       "done": false,
       "doneDate": null,
       "collapsed": false
+    },
+    {
+      "id": 48,
+      "label": "Conduct 1 interview",
+      "parentId": 47,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
+    },
+    {
+      "id": 49,
+      "label": "Immediately transcribe and evaluate",
+      "parentId": 47,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
     }
   ],
   "notesPanelCollapsed": true,
