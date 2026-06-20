@@ -7,7 +7,140 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+// ─────────────────────────────────────────────
+// TABLE INSERT (OneNote-style grid picker)
+// ─────────────────────────────────────────────
+(function(){
+  const ROWS = 8, COLS = 8;
+  let _hoverR = 0, _hoverC = 0;
+  let _pickerOpen = false;
+
+  // Build the 8×8 grid cells once
+  const grid = document.getElementById('tbl-grid');
+  for(let r = 1; r <= ROWS; r++){
+    for(let c = 1; c <= COLS; c++){
+      const cell = document.createElement('div');
+      cell.className = 'tbl-cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => updateHover(r, c));
+      cell.addEventListener('click', () => { insertTable(r, c); closePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  function updateHover(r, c){
+    _hoverR = r; _hoverC = c;
+    grid.querySelectorAll('.tbl-cell').forEach(el => {
+      el.classList.toggle('hover', +el.dataset.r <= r && +el.dataset.c <= c);
+    });
+    document.getElementById('tbl-picker-label').textContent = r + ' × ' + c + ' table';
+  }
+
+  function closePicker(){
+    document.getElementById('tbl-picker').classList.remove('open');
+    _pickerOpen = false;
+    document.getElementById('tbl-picker-label').textContent = 'Insert table';
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hover'));
+  }
+
+  window.toggleTablePicker = function(e){
+    e.stopPropagation();
+    _pickerOpen = !_pickerOpen;
+    document.getElementById('tbl-picker').classList.toggle('open', _pickerOpen);
+  };
+
+  // Close picker when clicking outside
+  document.addEventListener('click', e => {
+    if(_pickerOpen && !e.target.closest('.tbl-picker-wrap')) closePicker();
+  });
+
+  // Build and insert an r×c table at the cursor position
+  function insertTable(rows, cols){
+    const editor = document.getElementById('notes-edit');
+    editor.focus();
+
+    // Build table HTML
+    let html = '<table><tbody>';
+    for(let r = 0; r < rows; r++){
+      html += '<tr>';
+      for(let c = 0; c < cols; c++){
+        html += '<td><br></td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+
+    document.execCommand('insertHTML', false, html);
+    onNotesChange();
+
+    // Move cursor into first cell
+    setTimeout(() => {
+      const firstCell = editor.querySelector('td');
+      if(firstCell){
+        const range = document.createRange();
+        range.setStart(firstCell, 0);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }, 0);
+  }
+
+  // Tab key navigation between table cells
+  document.getElementById('notes-edit').addEventListener('keydown', e => {
+    if(e.key !== 'Tab') return;
+    const cell = e.target.closest('td, th');
+    if(!cell) return;
+    e.preventDefault();
+
+    const allCells = Array.from(cell.closest('table').querySelectorAll('td, th'));
+    const idx = allCells.indexOf(cell);
+
+    if(e.shiftKey){
+      // Shift+Tab: go to previous cell
+      if(idx > 0){
+        allCells[idx - 1].focus();
+      }
+    } else {
+      if(idx < allCells.length - 1){
+        // Next cell
+        allCells[idx + 1].focus();
+      } else {
+        // Last cell: add a new row
+        const table = cell.closest('table');
+        const colCount = table.querySelector('tr').querySelectorAll('td, th').length;
+        const newRow = document.createElement('tr');
+        for(let i = 0; i < colCount; i++){
+          const td = document.createElement('td');
+          td.innerHTML = '<br>';
+          newRow.appendChild(td);
+        }
+        table.querySelector('tbody').appendChild(newRow);
+        newRow.querySelector('td').focus();
+        onNotesChange();
+      }
+    }
+  });
+
+  // Make table cells focusable and contenteditable
+  document.getElementById('notes-edit').addEventListener('click', e => {
+    const cell = e.target.closest('td, th');
+    if(cell && cell.closest('#notes-edit')){
+      cell.contentEditable = 'true';
+    }
+  });
+
+  // Save on any input inside a table cell
+  document.getElementById('notes-edit').addEventListener('input', e => {
+    if(e.target.closest('td, th')) onNotesChange();
+  });
+
+})();
+
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -114,11 +247,11 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 #save-status.saving{color:#f0c040;}
 
 /* MAIN LAYOUT */
-.main{position:relative;z-index:1;display:flex;flex:1;overflow:hidden;min-width:0;}
+.main{position:relative;z-index:1;display:flex;flex:1;overflow:hidden;}
 
 /* TREE PANEL */
 .tree-panel{
-  flex:1;min-width:0;overflow:auto;
+  flex:1;overflow:auto;
   padding:32px 24px 48px 36px;
   position:relative;
 }
@@ -129,7 +262,6 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .tree-root{
   display:flex;align-items:flex-start;
   min-height:100%;
-  min-width:max-content;
 }
 
 #connector-svg{
@@ -154,7 +286,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   position:relative;
   white-space:nowrap;
   user-select:none;
-  min-width:140px;
+  min-width:140px;max-width:220px;
 }
 .node::before{
   content:'';position:absolute;inset:0;
@@ -166,7 +298,7 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 .node.done{background:var(--glass-done);border-color:var(--glass-done-border);}
 .node.done::before{background:linear-gradient(135deg,rgba(52,211,120,0.12) 0%,transparent 60%);}
 .node.done .node-label{color:var(--accent)}
-.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;}
+.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;}
 .node-check{
   width:16px;height:16px;border-radius:50%;
   border:1.5px solid rgba(255,255,255,0.2);
@@ -234,28 +366,27 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 .notes-toggle{
   position:absolute;
   top:50%;transform:translateY(-50%);
-  width:18px;height:40px;
-  background:rgba(255,255,255,0.04);
-  border:0.5px solid var(--glass-border);
-  border-radius:4px;
+  width:22px;height:52px;
+  background:var(--accent-dim);
+  border:0.5px solid var(--glass-done-border);
+  border-radius:5px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  color:var(--text-muted);
-  transition:background .15s, color .15s, width .2s;
+  color:var(--accent);
+  box-shadow:0 0 10px rgba(52,211,120,0.2);
+  transition:background .15s, box-shadow .15s;
   z-index:10;
-  right:-9px;
+  right:-11px;
 }
-.notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
+.notes-toggle:hover{background:rgba(52,211,120,0.28);box-shadow:0 0 16px rgba(52,211,120,0.35);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
-.notes-toggle.panel-collapsed{width:28px;right:-4px;color:var(--accent);}
-.notes-toggle.panel-collapsed svg{transform:rotate(180deg);width:11px;height:16px;}
-.notes-toggle.panel-collapsed:hover{color:var(--accent);background:var(--accent-dim);}
+.notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
 .notes-panel{
-  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
+  width:72vw;min-width:480px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
   transition:width .35s cubic-bezier(.4,0,.2,1);
 }
-.notes-panel.collapsed{width:0;}
+.notes-panel.collapsed{width:0;min-width:0;}
 .notes-panel.collapsed .notes-header,
 .notes-panel.collapsed .notes-body{ opacity:0; pointer-events:none; }
 
@@ -263,7 +394,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
   display:flex;align-items:center;gap:8px;flex-shrink:0;
   transition:opacity .2s;
-  min-width:340px;
+  min-width:0;
 }
 .notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
 .notes-tabs{display:flex;gap:4px;margin-left:auto}
@@ -274,7 +405,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 }
 .tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
 
-.notes-body{flex:1;overflow:hidden;position:relative;min-width:340px;transition:opacity .2s;display:flex;flex-direction:column;}
+.notes-body{flex:1;overflow:hidden;position:relative;min-width:0;transition:opacity .2s;display:flex;flex-direction:column;}
 
 /* RICH TEXT TOOLBAR */
 .rich-toolbar{
@@ -283,7 +414,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   border-bottom:0.5px solid var(--glass-border);
   background:rgba(255,255,255,0.02);
   flex-shrink:0;
-  min-width:340px;
+  min-width:0;
 }
 .rich-toolbar.hidden{display:none;}
 .rt-btn{
@@ -438,6 +569,77 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #toast.toast-ok{color:var(--accent);}
 #toast.toast-err{color:#ff6060;}
+
+/* ── NOTES TABLE ─────────────────────────── */
+#notes-edit table{
+  border-collapse:collapse;
+  margin:8px 0;
+  width:auto;
+  min-width:200px;
+}
+#notes-edit td, #notes-edit th{
+  border:0.5px solid rgba(255,255,255,0.18);
+  padding:6px 10px;
+  min-width:80px;
+  min-height:24px;
+  vertical-align:top;
+  font-size:13px;
+  line-height:1.6;
+  outline:none;
+  position:relative;
+}
+#notes-edit th{
+  background:rgba(255,255,255,0.05);
+  font-weight:500;
+  color:var(--text-primary);
+}
+#notes-edit td{color:var(--text-secondary);}
+#notes-edit td:focus, #notes-edit th:focus{
+  background:rgba(52,211,120,0.06);
+  border-color:rgba(52,211,120,0.4);
+}
+/* Tab key navigation between cells */
+
+/* ── TABLE INSERT PICKER ─────────────────── */
+.tbl-picker-wrap{
+  position:relative;display:inline-flex;align-items:center;
+}
+#tbl-picker{
+  display:none;
+  position:absolute;
+  top:calc(100% + 6px);
+  left:0;
+  background:rgba(14,14,14,0.98);
+  border:0.5px solid var(--glass-border);
+  border-radius:10px;
+  padding:10px;
+  z-index:999;
+  box-shadow:0 8px 32px rgba(0,0,0,0.7);
+  flex-direction:column;
+  gap:2px;
+  user-select:none;
+}
+#tbl-picker.open{display:flex;}
+.tbl-picker-label{
+  font-size:10px;font-family:var(--mono);color:var(--text-muted);
+  text-align:center;margin-bottom:4px;letter-spacing:.04em;
+}
+.tbl-grid{
+  display:grid;
+  grid-template-columns:repeat(8,18px);
+  grid-template-rows:repeat(8,18px);
+  gap:2px;
+}
+.tbl-cell{
+  width:18px;height:18px;border-radius:3px;
+  border:0.5px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);
+  cursor:pointer;transition:background .08s,border-color .08s;
+}
+.tbl-cell.hover{
+  background:var(--accent-dim);
+  border-color:var(--glass-done-border);
+}
 </style>
 </head>
 <body>
@@ -452,7 +654,6 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 <div class="viewer-banner" id="viewer-banner">
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5V8.5M6 3.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
   View-only mode — you're seeing a live snapshot. No edits can be made.
-  <button onclick="document.getElementById('viewer-banner').classList.remove('visible')" style="margin-left:auto;background:none;border:none;cursor:pointer;color:inherit;opacity:0.6;padding:0 2px;font-size:14px;line-height:1;" title="Dismiss">✕</button>
 </div>
 
 <div class="main">
@@ -466,7 +667,8 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
       <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
         <path d="M5.5 1L1.5 6L5.5 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-    </button>  </div>
+    </button>
+  </div>
 
   <div class="notes-panel" id="notes-panel">
     <div class="notes-header">
@@ -475,9 +677,6 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
         <button class="tab-btn active" id="tab-edit" onclick="switchTab('edit')">Edit</button>
         <button class="tab-btn" id="tab-preview" onclick="switchTab('preview')">Preview</button>
       </div>
-      <button class="icon-btn" onclick="toggleNotesPanel()" title="Close notes" style="margin-left:6px;flex-shrink:0;">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 8.5L8.5 1.5M1.5 1.5L8.5 8.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-      </button>
     </div>
 
     <!-- Rich text formatting toolbar -->
@@ -502,7 +701,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
       <div class="rt-sep"></div>
 
       <!-- Bold, Italic, Underline, Strikethrough -->
-      <button class="rt-btn" id="rt-bold"   title="Bold (Ctrl+B)"      onclick="rtToggle('bold')"><b>B</b></button>
+      <button class="rt-btn" id="rt-bold"   title="Bold (Ctrl+B)"      onmousedown="e=>e.preventDefault()" onclick="rtToggle('bold')"><b>B</b></button>
       <button class="rt-btn" id="rt-italic" title="Italic (Ctrl+I)"    onclick="rtToggle('italic')"><i>I</i></button>
       <button class="rt-btn" id="rt-under"  title="Underline (Ctrl+U)" onclick="rtToggle('underline')"><u>U</u></button>
       <button class="rt-btn" id="rt-strike" title="Strikethrough"       onclick="rtToggle('strikeThrough')"><s>S</s></button>
@@ -557,12 +756,33 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
       <!-- Clear formatting -->
       <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
+
+      <div class="rt-sep"></div>
+
+      <!-- Insert table -->
+      <div class="tbl-picker-wrap">
+        <button class="rt-btn" id="tbl-picker-btn" title="Insert table"
+                onclick="toggleTablePicker(event)"
+                style="width:auto;padding:0 7px;gap:4px;font-size:11px;">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <rect x="0.5" y="0.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1"/>
+            <line x1="4.5" y1="0.5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".8"/>
+            <line x1="8.5" y1="0.5" x2="8.5" y2="12.5" stroke="currentColor" stroke-width=".8"/>
+            <line x1="0.5" y1="4.5" x2="12.5" y2="4.5" stroke="currentColor" stroke-width=".8"/>
+            <line x1="0.5" y1="8.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width=".8"/>
+          </svg>
+          Table
+        </button>
+        <div id="tbl-picker">
+          <div class="tbl-picker-label" id="tbl-picker-label">Insert table</div>
+          <div class="tbl-grid" id="tbl-grid"></div>
+        </div>
+      </div>
     </div>
 
     <div class="notes-body">
       <div id="notes-edit"
            contenteditable="true"
-           spellcheck="false"
            data-placeholder="Write notes… select text to format it."></div>
       <div id="notes-preview"></div>
     </div>
@@ -670,9 +890,10 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 // RICH TEXT HELPERS
 // ─────────────────────────────────────────────
 function rtExec(cmd, value){
+  // execCommand needs the editor to be focused
   const editor = document.getElementById('notes-edit');
   editor.focus();
-  document.execCommand(cmd, false, value !== undefined ? value : null);
+  document.execCommand(cmd, false, value || null);
   updateToolbarState();
   onNotesChange();
 }
@@ -681,59 +902,26 @@ function rtToggle(cmd){
   rtExec(cmd);
 }
 
-// Fully sync all toolbar controls to the current selection/cursor
+// Reflect active bold/italic/etc in toolbar buttons
 function updateToolbarState(){
-  // Toggle buttons: bold, italic, underline, strikeThrough
-  const toggleMap = {bold:'rt-bold', italic:'rt-italic', underline:'rt-under', strikeThrough:'rt-strike'};
-  Object.entries(toggleMap).forEach(([cmd, id]) => {
+  ['bold','italic','underline','strikeThrough'].forEach(cmd => {
+    const id = {bold:'rt-bold',italic:'rt-italic',underline:'rt-under',strikeThrough:'rt-strike'}[cmd];
     const el = document.getElementById(id);
     if(el) el.classList.toggle('active', document.queryCommandState(cmd));
   });
-
-  // Font family dropdown — queryCommandValue returns the font name at cursor
-  const fontEl = document.getElementById('rt-font');
-  if(fontEl){
-    const currentFont = document.queryCommandValue('fontName');
-    // Match against option values (partial match since browsers may wrap in quotes)
-    let matched = false;
-    Array.from(fontEl.options).forEach(opt => {
-      if(currentFont && currentFont.toLowerCase().includes(opt.value.split(',')[0].toLowerCase().trim())){
-        fontEl.value = opt.value;
-        matched = true;
-      }
-    });
-    if(!matched) fontEl.selectedIndex = 0;
-  }
-
-  // Font size dropdown — queryCommandValue returns "1"–"7"
-  const sizeEl = document.getElementById('rt-size');
-  if(sizeEl){
-    const currentSize = document.queryCommandValue('fontSize');
-    if(currentSize) sizeEl.value = currentSize;
-  }
 }
 
-const _editor = document.getElementById('notes-edit');
-
-// Update toolbar on any cursor movement or selection change
-_editor.addEventListener('keyup',   updateToolbarState);
-_editor.addEventListener('mouseup', updateToolbarState);
-_editor.addEventListener('keydown', e => {
-  // After Ctrl+B/I/U the state flips — update on next tick so execCommand has run
-  if((e.ctrlKey || e.metaKey) && ['b','i','u'].includes(e.key.toLowerCase())){
-    setTimeout(updateToolbarState, 0);
-  }
-});
+document.getElementById('notes-edit').addEventListener('keyup', updateToolbarState);
+document.getElementById('notes-edit').addEventListener('mouseup', updateToolbarState);
+document.getElementById('notes-edit').addEventListener('selectionchange', updateToolbarState);
 document.addEventListener('selectionchange', () => {
-  if(document.activeElement === _editor) updateToolbarState();
+  if(document.activeElement === document.getElementById('notes-edit')) updateToolbarState();
 });
 
-// Prevent ALL toolbar mousedowns from stealing focus/selection from the editor.
-// This is the critical fix for bold (and all other buttons): without preventDefault
-// the click moves focus to the button, the editor loses its selection, and
-// execCommand then has nothing to operate on.
+// Prevent toolbar button clicks from stealing editor focus/selection
 document.getElementById('rich-toolbar').addEventListener('mousedown', e => {
-  if(e.target.type !== 'color' && !e.target.closest('input[type=color]') && !e.target.closest('select')){
+  // Only prevent default for buttons, not color inputs
+  if(e.target.type !== 'color' && !e.target.closest('select') && !e.target.closest('input[type=color]')){
     e.preventDefault();
   }
 });
@@ -834,51 +1022,45 @@ async function githubPush(){
   if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
 
   const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
-  const authHeader = { 'Authorization': `token ${cfg.token}` };
 
-  // Always fetch the freshest SHA (bypass cache with timestamp)
-  async function fetchSha(){
-    const r = await fetch(`${apiBase}?ref=${cfg.branch}&t=${Date.now()}`, { headers: authHeader });
-    if(r.ok){ const d = await r.json(); return { sha: d.sha, ok: true }; }
-    if(r.status === 404) return { sha: null, ok: true };
-    return { sha: null, ok: false, status: r.status };
-  }
-
-  // Attempt a single PUT with the given SHA
-  async function attemptPut(sha){
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
-    const body = {
-      message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
-      content,
-      branch: cfg.branch,
-    };
-    if(sha) body.sha = sha;
-    return fetch(apiBase, {
-      method: 'PUT',
-      headers: { ...authHeader, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+  let sha = null;
+  try{
+    const res = await fetch(`${apiBase}?ref=${cfg.branch}`, {
+      headers:{ 'Authorization': `token ${cfg.token}` }
     });
+    if(res.ok){
+      const data = await res.json();
+      sha = data.sha;
+    } else if(res.status !== 404){
+      const txt = await res.text();
+      return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,120)}` };
+    }
+  } catch(e){
+    return { ok: false, msg: 'Network error reading file: ' + e.message };
   }
+
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+  const body = {
+    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+    content,
+    branch: cfg.branch,
+  };
+  if(sha) body.sha = sha;
 
   try{
-    // First attempt with a fresh SHA
-    const shaResult = await fetchSha();
-    if(!shaResult.ok) return { ok: false, msg: `GitHub error ${shaResult.status} fetching file SHA.` };
-
-    let res = await attemptPut(shaResult.sha);
-
-    // 409 = SHA conflict — re-fetch the very latest SHA and retry once automatically
-    if(res.status === 409){
-      const retry = await fetchSha();
-      if(!retry.ok) return { ok: false, msg: 'SHA conflict and could not re-fetch SHA to retry.' };
-      res = await attemptPut(retry.sha);
-    }
-
+    const res = await fetch(apiBase, {
+      method: 'PUT',
+      headers:{
+        'Authorization': `token ${cfg.token}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify(body),
+    });
     if(res.ok) return { ok: true };
     const txt = await res.text();
     return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,200)}` };
   } catch(e){
-    return { ok: false, msg: 'Network error: ' + e.message };
+    return { ok: false, msg: 'Network error writing file: ' + e.message };
   }
 }
 
@@ -960,31 +1142,17 @@ function buildHeader(){
       btnRefresh.disabled = true;
       btnRefresh.textContent = 'Loading…';
       const r = await githubPull();
-      if(r.ok){
-        render();
-        if(state.notesPanelCollapsed){
-          document.getElementById('notes-panel').classList.add('collapsed');
-          document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
-        } else {
-          document.getElementById('notes-panel').classList.remove('collapsed');
-          document.getElementById('notes-toggle-btn').classList.remove('panel-collapsed');
-        }
-        setTimeout(drawConnectors, 360);
-        showToast('Refreshed','ok');
-      }
+      if(r.ok){ render(); showToast('Refreshed','ok'); }
       else showToast(r.msg,'err');
       btnRefresh.disabled = false;
       btnRefresh.textContent = '↻ Refresh';
     };
     actions.appendChild(btnRefresh);
-    // Disable editor in viewer mode — show preview tab only, hide tab switcher
+    // Disable editor in viewer mode
     const editor = document.getElementById('notes-edit');
     editor.contentEditable = 'false';
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
-    document.querySelector('.notes-tabs').style.display = 'none';
-    document.querySelector('.notes-header .icon-btn').style.display = 'none';
-    switchTab('preview');
   } else {
     const statusEl = document.createElement('span');
     statusEl.id = 'save-status';
@@ -1253,8 +1421,6 @@ function render(){
   if(editorEl.innerHTML !== (state.notes || '')){
     editorEl.innerHTML = state.notes || '';
   }
-  // In viewer mode the preview tab is always shown — keep it in sync
-  if(IS_VIEWER) renderPreview();
 
   root.innerHTML = '';
 
@@ -1425,27 +1591,11 @@ function drawConnectors(){
     };
   });
 
-  // Build a quick lookup map for nodes
-  const nodeMap = {};
-  state.nodes.forEach(n => { nodeMap[n.id] = n; });
-
-  // Walk up the ancestor chain — returns true if any ancestor is collapsed
-  function isHiddenByAncestor(node){
-    let cur = node;
-    while(cur.parentId !== null){
-      const parent = nodeMap[cur.parentId];
-      if(!parent) break;
-      if(parent.collapsed) return true;
-      cur = parent;
-    }
-    return false;
-  }
-
   state.nodes.forEach(node => {
     if(node.parentId === null) return;
-    // Skip if this node is hidden because any ancestor is collapsed
-    if(isHiddenByAncestor(node)) return;
-    const p = positions[node.parentId];
+    const parent = state.nodes.find(n => n.id === node.parentId);
+    if(!parent || parent.collapsed) return;
+    const p = positions[parent.id];
     const c = positions[node.id];
     if(!p || !c) return;
     const x1 = p.right, y1 = p.cy, x2 = c.left, y2 = c.cy;
@@ -1506,15 +1656,6 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
     const r = await githubPull();
     if(r.ok){
       render();
-      // Restore notes panel collapsed state from the loaded data
-      if(state.notesPanelCollapsed){
-        document.getElementById('notes-panel').classList.add('collapsed');
-        document.getElementById('notes-toggle-btn').classList.add('panel-collapsed');
-      } else {
-        document.getElementById('notes-panel').classList.remove('collapsed');
-        document.getElementById('notes-toggle-btn').classList.remove('panel-collapsed');
-      }
-      setTimeout(drawConnectors, 360);
     } else {
       document.getElementById('project-title-display').textContent = 'Error';
       showToast(r.msg, 'err');
@@ -1547,13 +1688,142 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
       } else if(!r.ok){
         showToast('Could not load from GitHub: ' + r.msg, 'err');
       }
-    } else {
-      // No config in this browser — show a non-blocking prompt so the user knows
-      // they need to enter config to sync from GitHub (especially on a new device/browser)
-      showToast('No config yet — open ⚙ Config to connect GitHub and load your data.', 'err');
     }
   }
 })();
+
+// ─────────────────────────────────────────────
+// TABLE INSERT (OneNote-style grid picker)
+// ─────────────────────────────────────────────
+(function(){
+  const ROWS = 8, COLS = 8;
+  let _hoverR = 0, _hoverC = 0;
+  let _pickerOpen = false;
+
+  // Build the 8×8 grid cells once
+  const grid = document.getElementById('tbl-grid');
+  for(let r = 1; r <= ROWS; r++){
+    for(let c = 1; c <= COLS; c++){
+      const cell = document.createElement('div');
+      cell.className = 'tbl-cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => updateHover(r, c));
+      cell.addEventListener('click', () => { insertTable(r, c); closePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  function updateHover(r, c){
+    _hoverR = r; _hoverC = c;
+    grid.querySelectorAll('.tbl-cell').forEach(el => {
+      el.classList.toggle('hover', +el.dataset.r <= r && +el.dataset.c <= c);
+    });
+    document.getElementById('tbl-picker-label').textContent = r + ' × ' + c + ' table';
+  }
+
+  function closePicker(){
+    document.getElementById('tbl-picker').classList.remove('open');
+    _pickerOpen = false;
+    document.getElementById('tbl-picker-label').textContent = 'Insert table';
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hover'));
+  }
+
+  window.toggleTablePicker = function(e){
+    e.stopPropagation();
+    _pickerOpen = !_pickerOpen;
+    document.getElementById('tbl-picker').classList.toggle('open', _pickerOpen);
+  };
+
+  // Close picker when clicking outside
+  document.addEventListener('click', e => {
+    if(_pickerOpen && !e.target.closest('.tbl-picker-wrap')) closePicker();
+  });
+
+  // Build and insert an r×c table at the cursor position
+  function insertTable(rows, cols){
+    const editor = document.getElementById('notes-edit');
+    editor.focus();
+
+    // Build table HTML
+    let html = '<table><tbody>';
+    for(let r = 0; r < rows; r++){
+      html += '<tr>';
+      for(let c = 0; c < cols; c++){
+        html += '<td><br></td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table><p><br></p>';
+
+    document.execCommand('insertHTML', false, html);
+    onNotesChange();
+
+    // Move cursor into first cell
+    setTimeout(() => {
+      const firstCell = editor.querySelector('td');
+      if(firstCell){
+        const range = document.createRange();
+        range.setStart(firstCell, 0);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }, 0);
+  }
+
+  // Tab key navigation between table cells
+  document.getElementById('notes-edit').addEventListener('keydown', e => {
+    if(e.key !== 'Tab') return;
+    const cell = e.target.closest('td, th');
+    if(!cell) return;
+    e.preventDefault();
+
+    const allCells = Array.from(cell.closest('table').querySelectorAll('td, th'));
+    const idx = allCells.indexOf(cell);
+
+    if(e.shiftKey){
+      // Shift+Tab: go to previous cell
+      if(idx > 0){
+        allCells[idx - 1].focus();
+      }
+    } else {
+      if(idx < allCells.length - 1){
+        // Next cell
+        allCells[idx + 1].focus();
+      } else {
+        // Last cell: add a new row
+        const table = cell.closest('table');
+        const colCount = table.querySelector('tr').querySelectorAll('td, th').length;
+        const newRow = document.createElement('tr');
+        for(let i = 0; i < colCount; i++){
+          const td = document.createElement('td');
+          td.innerHTML = '<br>';
+          newRow.appendChild(td);
+        }
+        table.querySelector('tbody').appendChild(newRow);
+        newRow.querySelector('td').focus();
+        onNotesChange();
+      }
+    }
+  });
+
+  // Make table cells focusable and contenteditable
+  document.getElementById('notes-edit').addEventListener('click', e => {
+    const cell = e.target.closest('td, th');
+    if(cell && cell.closest('#notes-edit')){
+      cell.contentEditable = 'true';
+    }
+  });
+
+  // Save on any input inside a table cell
+  document.getElementById('notes-edit').addEventListener('input', e => {
+    if(e.target.closest('td, th')) onNotesChange();
+  });
+
+})();
+
 </script>
 </body>
 </html>
