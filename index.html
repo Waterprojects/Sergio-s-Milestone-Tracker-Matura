@@ -7,176 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
-// ─────────────────────────────────────────────
-// TABLE FEATURE
-// ─────────────────────────────────────────────
-(function(){
-  const editor = document.getElementById('notes-edit');
-
-  // ── Picker grid ──────────────────────────────
-  const grid = document.getElementById('tbl-grid');
-  for(let r = 1; r <= 8; r++){
-    for(let c = 1; c <= 8; c++){
-      const cell = document.createElement('div');
-      cell.className = 'tbl-cell';
-      cell.dataset.r = r; cell.dataset.c = c;
-      cell.addEventListener('mouseenter', () => {
-        grid.querySelectorAll('.tbl-cell').forEach(el =>
-          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
-        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
-      });
-      cell.addEventListener('click', () => { doInsert(r, c); closePicker(); });
-      grid.appendChild(cell);
-    }
-  }
-
-  function closePicker(){
-    document.getElementById('tbl-picker').classList.remove('open');
-    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
-    document.getElementById('tbl-picker-label').textContent = 'Insert table';
-  }
-  window.toggleTblPicker = function(e){
-    e.stopPropagation();
-    document.getElementById('tbl-picker').classList.toggle('open');
-  };
-  document.addEventListener('click', e => {
-    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
-  });
-
-  // ── Insert table ─────────────────────────────
-  function doInsert(rows, cols){
-    editor.focus();
-    let html = '<table><tbody>';
-    for(let r = 0; r < rows; r++){
-      html += '<tr>' + '<td><br></td>'.repeat(cols) + '</tr>';
-    }
-    html += '</tbody></table>';
-    document.execCommand('insertHTML', false, html);
-    setTimeout(() => {
-      const first = editor.querySelector('table:last-of-type td');
-      if(first) focusCell(first);
-      syncAddRowButtons();
-    }, 10);
-    if(typeof onNotesChange === 'function') onNotesChange();
-  }
-
-  // ── Focus a cell ─────────────────────────────
-  function focusCell(cell){
-    cell.focus();
-    const r = document.createRange();
-    r.selectNodeContents(cell);
-    r.collapse(false);
-    const s = window.getSelection();
-    s.removeAllRanges(); s.addRange(r);
-  }
-
-  // ── Add a row, return first cell ─────────────
-  function addRow(table){
-    const cols = table.querySelector('tr').querySelectorAll('td').length;
-    const tr = document.createElement('tr');
-    for(let i = 0; i < cols; i++){
-      const td = document.createElement('td'); td.innerHTML = '<br>';
-      tr.appendChild(td);
-    }
-    table.querySelector('tbody').appendChild(tr);
-    if(typeof onNotesChange === 'function') onNotesChange();
-    return tr.querySelector('td');
-  }
-
-  // ── ONE add-row button per table ─────────────
-  // Key insight: buttons are inserted OUTSIDE the editor's contenteditable
-  // area, so they never get serialised into state.notes and never appear
-  // in renderPreview. They live in the DOM between the table and the next
-  // sibling but are not children of #notes-edit.
-  //
-  // Wait — contenteditable means everything inside #notes-edit IS editable
-  // and saved. So we keep buttons INSIDE but mark them with a data attribute
-  // and strip them in onNotesChange before saving, and in renderPreview.
-
-  const _attached = new WeakSet();
-
-  function syncAddRowButtons(){
-    if(IS_VIEWER) return;
-    editor.querySelectorAll('table').forEach(table => {
-      if(_attached.has(table)) return;
-      _attached.add(table);
-
-      const btn = document.createElement('button');
-      btn.className = 'tbl-add-row';
-      btn.setAttribute('data-tbl-ui', '1'); // marks it as UI-only
-      btn.contentEditable = 'false';
-      btn.textContent = '+ Add row';
-      btn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        focusCell(addRow(table));
-      });
-      // Place immediately after the table inside the editor
-      table.insertAdjacentElement('afterend', btn);
-    });
-
-    // Remove any orphaned buttons (whose table was deleted)
-    editor.querySelectorAll('.tbl-add-row').forEach(btn => {
-      const prev = btn.previousElementSibling;
-      if(!prev || prev.tagName !== 'TABLE') btn.remove();
-    });
-  }
-
-  // Strip UI buttons from HTML before saving or previewing
-  function stripUiElements(html){
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    div.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
-    return div.innerHTML;
-  }
-
-  // Patch onNotesChange to strip buttons before saving
-  const _origOnChange = window.onNotesChange;
-  window.onNotesChange = function(){
-    if(IS_VIEWER) return;
-    state.notes = stripUiElements(editor.innerHTML);
-    stashLocal(); markDirty();
-  };
-
-  // Patch renderPreview to strip buttons
-  const _origRenderPreview = window.renderPreview;
-  window.renderPreview = function(){
-    const clone = editor.cloneNode(true);
-    clone.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
-    document.getElementById('notes-preview').innerHTML = clone.innerHTML;
-  };
-
-  // Watch for tables added dynamically
-  const obs = new MutationObserver(() => syncAddRowButtons());
-  obs.observe(editor, { childList: true, subtree: true });
-  setTimeout(syncAddRowButtons, 300);
-
-  // ── Tab / Shift+Tab between cells ────────────
-  document.addEventListener('keydown', function(e){
-    if(e.key !== 'Tab') return;
-    const sel = window.getSelection();
-    if(!sel || !sel.rangeCount) return;
-    let node = sel.anchorNode;
-    let cell = null;
-    while(node && node !== editor){
-      if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
-      node = node.parentNode;
-    }
-    if(!cell) return;
-    e.preventDefault(); e.stopPropagation();
-    const cells = Array.from(cell.closest('table').querySelectorAll('td,th'));
-    const idx = cells.indexOf(cell);
-    if(!e.shiftKey){
-      if(idx < cells.length - 1) focusCell(cells[idx + 1]);
-      else focusCell(addRow(cell.closest('table')));
-    } else {
-      if(idx > 0) focusCell(cells[idx - 1]);
-    }
-  }, true);
-
-})();
-
-</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -402,27 +233,26 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 .notes-toggle{
   position:absolute;
   top:50%;transform:translateY(-50%);
-  width:22px;height:52px;
-  background:var(--accent-dim);
-  border:0.5px solid var(--glass-done-border);
-  border-radius:5px;
+  width:18px;height:40px;
+  background:rgba(255,255,255,0.04);
+  border:0.5px solid var(--glass-border);
+  border-radius:4px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  color:var(--accent);
-  box-shadow:0 0 10px rgba(52,211,120,0.2);
-  transition:background .15s,box-shadow .15s;
+  color:var(--text-muted);
+  transition:background .15s, color .15s;
   z-index:10;
-  right:-11px;
+  right:-9px;
 }
-.notes-toggle:hover{background:rgba(52,211,120,0.28);box-shadow:0 0 16px rgba(52,211,120,0.35);}
+.notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
 .notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
 .notes-panel{
-  width:72vw;min-width:480px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
+  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
   transition:width .35s cubic-bezier(.4,0,.2,1);
 }
-.notes-panel.collapsed{width:0;min-width:0;}
+.notes-panel.collapsed{width:0;}
 .notes-panel.collapsed .notes-header,
 .notes-panel.collapsed .notes-body{ opacity:0; pointer-events:none; }
 
@@ -430,7 +260,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
   display:flex;align-items:center;gap:8px;flex-shrink:0;
   transition:opacity .2s;
-  min-width:0;
+  min-width:340px;
 }
 .notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
 .notes-tabs{display:flex;gap:4px;margin-left:auto}
@@ -441,7 +271,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 }
 .tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
 
-.notes-body{flex:1;overflow:hidden;position:relative;min-width:0;transition:opacity .2s;display:flex;flex-direction:column;}
+.notes-body{flex:1;overflow:hidden;position:relative;min-width:340px;transition:opacity .2s;display:flex;flex-direction:column;}
 
 /* RICH TEXT TOOLBAR */
 .rich-toolbar{
@@ -450,7 +280,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   border-bottom:0.5px solid var(--glass-border);
   background:rgba(255,255,255,0.02);
   flex-shrink:0;
-  min-width:0;
+  min-width:340px;
 }
 .rich-toolbar.hidden{display:none;}
 .rt-btn{
@@ -540,15 +370,6 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #notes-preview a{color:var(--accent);text-decoration:none}
 #notes-preview strong{color:var(--text-primary);font-weight:500}
 #notes-preview hr{border:none;border-top:0.5px solid var(--glass-border);margin:1em 0}
-#notes-preview table{border-collapse:collapse;margin:10px 0;width:auto;}
-#notes-preview td,#notes-preview th{
-  border:0.5px solid rgba(255,255,255,0.18);
-  padding:6px 10px;min-width:80px;
-  vertical-align:top;font-size:13px;line-height:1.6;
-  color:var(--text-secondary);word-break:break-word;
-}
-#notes-preview th{background:rgba(255,255,255,0.05);color:var(--text-primary);font-weight:500;}
-#notes-preview .tbl-add-row{display:none!important;}
 
 /* MODAL */
 .modal-overlay{
@@ -614,54 +435,6 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #toast.toast-ok{color:var(--accent);}
 #toast.toast-err{color:#ff6060;}
-
-/* ── TABLE IN EDITOR ─────────────────────── */
-#notes-edit table{border-collapse:collapse;margin:10px 0;width:auto;}
-#notes-edit td{
-  border:0.5px solid rgba(255,255,255,0.18);
-  padding:6px 10px;min-width:100px;
-  vertical-align:top;font-size:13px;line-height:1.6;
-  color:var(--text-secondary);word-break:break-word;
-}
-#notes-edit td:focus{
-  outline:none;
-  background:rgba(52,211,120,0.06);
-  border-color:rgba(52,211,120,0.4);
-}
-.tbl-add-row{
-  display:inline-block;
-  margin:2px 0 10px;padding:3px 10px;
-  font-size:11px;font-family:var(--mono);
-  color:var(--text-muted);
-  background:transparent;
-  border:0.5px dashed rgba(255,255,255,0.12);
-  border-radius:4px;cursor:pointer;
-  transition:color .15s,border-color .15s;
-}
-.tbl-add-row:hover{color:var(--accent);border-color:rgba(52,211,120,0.4);}
-body.viewer-mode .tbl-add-row{display:none!important;}
-
-/* ── TABLE PICKER ────────────────────────── */
-.tbl-picker-wrap{position:relative;display:inline-flex;align-items:center;}
-#tbl-picker{
-  display:none;position:absolute;
-  top:calc(100% + 6px);left:0;
-  background:rgba(14,14,14,0.98);
-  border:0.5px solid var(--glass-border);
-  border-radius:10px;padding:10px;
-  z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.7);
-  flex-direction:column;gap:4px;user-select:none;
-}
-#tbl-picker.open{display:flex;}
-#tbl-picker-label{font-size:10px;font-family:var(--mono);color:var(--text-muted);text-align:center;letter-spacing:.04em;}
-.tbl-grid{display:grid;grid-template-columns:repeat(8,18px);gap:2px;}
-.tbl-cell{
-  width:18px;height:18px;border-radius:3px;
-  border:0.5px solid rgba(255,255,255,0.1);
-  background:rgba(255,255,255,0.03);
-  cursor:pointer;transition:background .06s,border-color .06s;
-}
-.tbl-cell.hi{background:var(--accent-dim);border-color:var(--glass-done-border);}
 </style>
 </head>
 <body>
@@ -778,23 +551,6 @@ body.viewer-mode .tbl-add-row{display:none!important;}
 
       <!-- Clear formatting -->
       <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
-      <div class="rt-sep"></div>
-      <div class="tbl-picker-wrap">
-        <button class="rt-btn" title="Insert table" onclick="toggleTblPicker(event)" style="width:auto;padding:0 7px;font-size:11px;gap:3px;">
-          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <rect x=".5" y=".5" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/>
-            <line x1="4.5" y1=".5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
-            <line x1="8.5" y1=".5" x2="8.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
-            <line x1=".5" y1="4.5" x2="12.5" y2="4.5" stroke="currentColor" stroke-width=".7"/>
-            <line x1=".5" y1="8.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width=".7"/>
-          </svg>
-          Table
-        </button>
-        <div id="tbl-picker">
-          <div id="tbl-picker-label">Insert table</div>
-          <div class="tbl-grid" id="tbl-grid"></div>
-        </div>
-      </div>
     </div>
 
     <div class="notes-body">
@@ -1039,45 +795,51 @@ async function githubPush(){
   if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
 
   const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
+  const authHeader = { 'Authorization': `token ${cfg.token}` };
 
-  let sha = null;
-  try{
-    const res = await fetch(`${apiBase}?ref=${cfg.branch}`, {
-      headers:{ 'Authorization': `token ${cfg.token}` }
+  // Always bust the cache when fetching SHA — without this, the second save
+  // gets a stale SHA from GitHub's CDN and fails with a 409 conflict.
+  async function freshSha(){
+    const r = await fetch(`${apiBase}?ref=${cfg.branch}&t=${Date.now()}`, {
+      headers: { ...authHeader, 'Cache-Control': 'no-cache' }
     });
-    if(res.ok){
-      const data = await res.json();
-      sha = data.sha;
-    } else if(res.status !== 404){
-      const txt = await res.text();
-      return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,120)}` };
-    }
-  } catch(e){
-    return { ok: false, msg: 'Network error reading file: ' + e.message };
+    if(r.ok){ const d = await r.json(); return d.sha; }
+    if(r.status === 404) return null; // file doesn't exist yet
+    const txt = await r.text();
+    throw new Error(`GitHub error ${r.status}: ${txt.slice(0,120)}`);
   }
 
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
-  const body = {
-    message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
-    content,
-    branch: cfg.branch,
-  };
-  if(sha) body.sha = sha;
-
-  try{
-    const res = await fetch(apiBase, {
+  async function put(sha){
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(state, null, 2))));
+    const body = {
+      message: `tracker update ${new Date().toISOString().slice(0,16).replace('T',' ')}`,
+      content: encoded,
+      branch: cfg.branch,
+    };
+    if(sha) body.sha = sha;
+    return fetch(apiBase, {
       method: 'PUT',
-      headers:{
-        'Authorization': `token ${cfg.token}`,
-        'Content-Type':  'application/json',
-      },
+      headers: { ...authHeader, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+  }
+
+  try{
+    let sha = await freshSha();
+    let res = await put(sha);
+
+    // 409 = SHA conflict (race or stale cache despite bust) — retry once
+    if(res.status === 409){
+      await new Promise(r => setTimeout(r, 600));
+      sha = await freshSha();
+      res = await put(sha);
+    }
+
     if(res.ok) return { ok: true };
     const txt = await res.text();
     return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,200)}` };
   } catch(e){
-    return { ok: false, msg: 'Network error writing file: ' + e.message };
+    return { ok: false, msg: e.message };
   }
 }
 
@@ -1165,16 +927,11 @@ function buildHeader(){
       btnRefresh.textContent = '↻ Refresh';
     };
     actions.appendChild(btnRefresh);
-    // Disable editor — viewer sees rendered preview only
+    // Disable editor in viewer mode
     const editor = document.getElementById('notes-edit');
     editor.contentEditable = 'false';
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
-    const noteTabs = document.querySelector('.notes-tabs');
-    if(noteTabs) noteTabs.style.display = 'none';
-    const closeBtn = document.querySelector('.notes-header .icon-btn');
-    if(closeBtn) closeBtn.style.display = 'none';
-    setTimeout(() => switchTab('preview'), 50);
   } else {
     const statusEl = document.createElement('span');
     statusEl.id = 'save-status';
@@ -1422,11 +1179,10 @@ function switchTab(tab){
 }
 
 function renderPreview(){
-  // Clone the editor content so we can strip edit-only elements before display
-  const clone = document.getElementById('notes-edit').cloneNode(true);
-  // Remove add-row buttons — they are editor-only, not part of the content
-  clone.querySelectorAll('.tbl-add-row').forEach(el => el.remove());
-  document.getElementById('notes-preview').innerHTML = clone.innerHTML;
+  // Preview strips HTML formatting and shows markdown rendered from plain text
+  // For rich HTML notes we just show the raw HTML in the preview pane
+  const raw = document.getElementById('notes-edit').innerHTML;
+  document.getElementById('notes-preview').innerHTML = raw;
 }
 
 // ─────────────────────────────────────────────
@@ -1714,175 +1470,6 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
     }
   }
 })();
-
-// ─────────────────────────────────────────────
-// TABLE FEATURE
-// ─────────────────────────────────────────────
-(function(){
-  const editor = document.getElementById('notes-edit');
-
-  // ── Picker grid ──────────────────────────────
-  const grid = document.getElementById('tbl-grid');
-  for(let r = 1; r <= 8; r++){
-    for(let c = 1; c <= 8; c++){
-      const cell = document.createElement('div');
-      cell.className = 'tbl-cell';
-      cell.dataset.r = r; cell.dataset.c = c;
-      cell.addEventListener('mouseenter', () => {
-        grid.querySelectorAll('.tbl-cell').forEach(el =>
-          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
-        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
-      });
-      cell.addEventListener('click', () => { doInsert(r, c); closePicker(); });
-      grid.appendChild(cell);
-    }
-  }
-
-  function closePicker(){
-    document.getElementById('tbl-picker').classList.remove('open');
-    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
-    document.getElementById('tbl-picker-label').textContent = 'Insert table';
-  }
-  window.toggleTblPicker = function(e){
-    e.stopPropagation();
-    document.getElementById('tbl-picker').classList.toggle('open');
-  };
-  document.addEventListener('click', e => {
-    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
-  });
-
-  // ── Insert table ─────────────────────────────
-  function doInsert(rows, cols){
-    editor.focus();
-    let html = '<table><tbody>';
-    for(let r = 0; r < rows; r++){
-      html += '<tr>' + '<td><br></td>'.repeat(cols) + '</tr>';
-    }
-    html += '</tbody></table>';
-    document.execCommand('insertHTML', false, html);
-    setTimeout(() => {
-      const first = editor.querySelector('table:last-of-type td');
-      if(first) focusCell(first);
-      syncAddRowButtons();
-    }, 10);
-    if(typeof onNotesChange === 'function') onNotesChange();
-  }
-
-  // ── Focus a cell ─────────────────────────────
-  function focusCell(cell){
-    cell.focus();
-    const r = document.createRange();
-    r.selectNodeContents(cell);
-    r.collapse(false);
-    const s = window.getSelection();
-    s.removeAllRanges(); s.addRange(r);
-  }
-
-  // ── Add a row, return first cell ─────────────
-  function addRow(table){
-    const cols = table.querySelector('tr').querySelectorAll('td').length;
-    const tr = document.createElement('tr');
-    for(let i = 0; i < cols; i++){
-      const td = document.createElement('td'); td.innerHTML = '<br>';
-      tr.appendChild(td);
-    }
-    table.querySelector('tbody').appendChild(tr);
-    if(typeof onNotesChange === 'function') onNotesChange();
-    return tr.querySelector('td');
-  }
-
-  // ── ONE add-row button per table ─────────────
-  // Key insight: buttons are inserted OUTSIDE the editor's contenteditable
-  // area, so they never get serialised into state.notes and never appear
-  // in renderPreview. They live in the DOM between the table and the next
-  // sibling but are not children of #notes-edit.
-  //
-  // Wait — contenteditable means everything inside #notes-edit IS editable
-  // and saved. So we keep buttons INSIDE but mark them with a data attribute
-  // and strip them in onNotesChange before saving, and in renderPreview.
-
-  const _attached = new WeakSet();
-
-  function syncAddRowButtons(){
-    if(IS_VIEWER) return;
-    editor.querySelectorAll('table').forEach(table => {
-      if(_attached.has(table)) return;
-      _attached.add(table);
-
-      const btn = document.createElement('button');
-      btn.className = 'tbl-add-row';
-      btn.setAttribute('data-tbl-ui', '1'); // marks it as UI-only
-      btn.contentEditable = 'false';
-      btn.textContent = '+ Add row';
-      btn.addEventListener('mousedown', e => {
-        e.preventDefault();
-        focusCell(addRow(table));
-      });
-      // Place immediately after the table inside the editor
-      table.insertAdjacentElement('afterend', btn);
-    });
-
-    // Remove any orphaned buttons (whose table was deleted)
-    editor.querySelectorAll('.tbl-add-row').forEach(btn => {
-      const prev = btn.previousElementSibling;
-      if(!prev || prev.tagName !== 'TABLE') btn.remove();
-    });
-  }
-
-  // Strip UI buttons from HTML before saving or previewing
-  function stripUiElements(html){
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    div.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
-    return div.innerHTML;
-  }
-
-  // Patch onNotesChange to strip buttons before saving
-  const _origOnChange = window.onNotesChange;
-  window.onNotesChange = function(){
-    if(IS_VIEWER) return;
-    state.notes = stripUiElements(editor.innerHTML);
-    stashLocal(); markDirty();
-  };
-
-  // Patch renderPreview to strip buttons
-  const _origRenderPreview = window.renderPreview;
-  window.renderPreview = function(){
-    const clone = editor.cloneNode(true);
-    clone.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
-    document.getElementById('notes-preview').innerHTML = clone.innerHTML;
-  };
-
-  // Watch for tables added dynamically
-  const obs = new MutationObserver(() => syncAddRowButtons());
-  obs.observe(editor, { childList: true, subtree: true });
-  setTimeout(syncAddRowButtons, 300);
-
-  // ── Tab / Shift+Tab between cells ────────────
-  document.addEventListener('keydown', function(e){
-    if(e.key !== 'Tab') return;
-    const sel = window.getSelection();
-    if(!sel || !sel.rangeCount) return;
-    let node = sel.anchorNode;
-    let cell = null;
-    while(node && node !== editor){
-      if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
-      node = node.parentNode;
-    }
-    if(!cell) return;
-    e.preventDefault(); e.stopPropagation();
-    const cells = Array.from(cell.closest('table').querySelectorAll('td,th'));
-    const idx = cells.indexOf(cell);
-    if(!e.shiftKey){
-      if(idx < cells.length - 1) focusCell(cells[idx + 1]);
-      else focusCell(addRow(cell.closest('table')));
-    } else {
-      if(idx > 0) focusCell(cells[idx - 1]);
-    }
-  }, true);
-
-})();
-
 </script>
 </body>
 </html>
