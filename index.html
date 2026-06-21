@@ -9,134 +9,171 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
 // ─────────────────────────────────────────────
-// TABLE INSERT (OneNote-style grid picker)
+// TABLE FEATURE
 // ─────────────────────────────────────────────
 (function(){
   const ROWS = 8, COLS = 8;
-  let _hoverR = 0, _hoverC = 0;
-  let _pickerOpen = false;
+  const editor = document.getElementById('notes-edit');
 
-  // Build the 8×8 grid cells once
+  // ── Build picker grid ──
   const grid = document.getElementById('tbl-grid');
   for(let r = 1; r <= ROWS; r++){
     for(let c = 1; c <= COLS; c++){
       const cell = document.createElement('div');
       cell.className = 'tbl-cell';
-      cell.dataset.r = r;
-      cell.dataset.c = c;
-      cell.addEventListener('mouseenter', () => updateHover(r, c));
-      cell.addEventListener('click', () => { insertTable(r, c); closePicker(); });
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => {
+        grid.querySelectorAll('.tbl-cell').forEach(el =>
+          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
+        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
+      });
+      cell.addEventListener('click', () => { doInsertTable(r, c); closePicker(); });
       grid.appendChild(cell);
     }
   }
 
-  function updateHover(r, c){
-    _hoverR = r; _hoverC = c;
-    grid.querySelectorAll('.tbl-cell').forEach(el => {
-      el.classList.toggle('hover', +el.dataset.r <= r && +el.dataset.c <= c);
-    });
-    document.getElementById('tbl-picker-label').textContent = r + ' × ' + c + ' table';
-  }
-
   function closePicker(){
     document.getElementById('tbl-picker').classList.remove('open');
-    _pickerOpen = false;
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
     document.getElementById('tbl-picker-label').textContent = 'Insert table';
-    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hover'));
   }
 
-  window.toggleTablePicker = function(e){
+  window.toggleTblPicker = function(e){
     e.stopPropagation();
-    _pickerOpen = !_pickerOpen;
-    document.getElementById('tbl-picker').classList.toggle('open', _pickerOpen);
+    document.getElementById('tbl-picker').classList.toggle('open');
   };
-
-  // Close picker when clicking outside
   document.addEventListener('click', e => {
-    if(_pickerOpen && !e.target.closest('.tbl-picker-wrap')) closePicker();
+    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
   });
 
-  // Build and insert an r×c table at the cursor position
-  function insertTable(rows, cols){
-    const editor = document.getElementById('notes-edit');
+  // ── Insert table ──
+  function doInsertTable(rows, cols){
     editor.focus();
-
-    // Build table HTML
     let html = '<table><tbody>';
     for(let r = 0; r < rows; r++){
       html += '<tr>';
-      for(let c = 0; c < cols; c++){
-        html += '<td><br></td>';
-      }
+      for(let c = 0; c < cols; c++) html += '<td><br></td>';
       html += '</tr>';
     }
-    html += '</tbody></table><p><br></p>';
-
+    html += '</tbody></table>';
     document.execCommand('insertHTML', false, html);
-    onNotesChange();
-
-    // Move cursor into first cell
+    // Place cursor in first cell
     setTimeout(() => {
-      const firstCell = editor.querySelector('td');
-      if(firstCell){
-        const range = document.createRange();
-        range.setStart(firstCell, 0);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    }, 0);
+      const first = editor.querySelector('td');
+      if(first) moveCursorTo(first);
+    }, 10);
+    if(typeof onNotesChange === 'function') onNotesChange();
   }
 
-  // Tab key navigation between table cells
-  document.getElementById('notes-edit').addEventListener('keydown', e => {
+  // ── Move cursor into a cell ──
+  function moveCursorTo(cell){
+    cell.focus();
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // ── Get all cells in a table ──
+  function getCells(table){
+    return Array.from(table.querySelectorAll('td'));
+  }
+
+  // ── Add a new row at the bottom of the table ──
+  function addRow(table){
+    const firstRow = table.querySelector('tr');
+    if(!firstRow) return null;
+    const colCount = firstRow.querySelectorAll('td').length;
+    const tr = document.createElement('tr');
+    for(let i = 0; i < colCount; i++){
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    table.querySelector('tbody').appendChild(tr);
+    if(typeof onNotesChange === 'function') onNotesChange();
+    return tr.querySelector('td');
+  }
+
+  // ── Tab / Shift+Tab navigation — intercept at capture phase ──
+  // Using capture:true means this fires BEFORE the browser's default
+  // tab-to-next-element behaviour, letting us preventDefault reliably.
+  document.addEventListener('keydown', function(e){
     if(e.key !== 'Tab') return;
-    const cell = e.target.closest('td, th');
-    if(!cell) return;
+
+    // Find the cell the cursor is currently inside
+    const sel = window.getSelection();
+    if(!sel || sel.rangeCount === 0) return;
+    let node = sel.anchorNode;
+    // Walk up to find a td
+    let cell = null;
+    while(node && node !== editor){
+      if(node.nodeName === 'TD' || node.nodeName === 'TH'){
+        cell = node; break;
+      }
+      node = node.parentNode;
+    }
+    if(!cell) return; // not inside a table cell — let browser handle normally
+
+    // We are inside a table cell inside #notes-edit — handle it ourselves
     e.preventDefault();
+    e.stopPropagation(); // stop browser switching browser tabs
 
-    const allCells = Array.from(cell.closest('table').querySelectorAll('td, th'));
-    const idx = allCells.indexOf(cell);
+    const table = cell.closest('table');
+    const cells = getCells(table);
+    const idx   = cells.indexOf(cell);
 
-    if(e.shiftKey){
-      // Shift+Tab: go to previous cell
-      if(idx > 0){
-        allCells[idx - 1].focus();
+    if(!e.shiftKey){
+      // Tab → next cell
+      if(idx < cells.length - 1){
+        moveCursorTo(cells[idx + 1]);
+      } else {
+        // Last cell → add new row, move to first cell of it
+        const firstNewCell = addRow(table);
+        if(firstNewCell) moveCursorTo(firstNewCell);
       }
     } else {
-      if(idx < allCells.length - 1){
-        // Next cell
-        allCells[idx + 1].focus();
-      } else {
-        // Last cell: add a new row
-        const table = cell.closest('table');
-        const colCount = table.querySelector('tr').querySelectorAll('td, th').length;
-        const newRow = document.createElement('tr');
-        for(let i = 0; i < colCount; i++){
-          const td = document.createElement('td');
-          td.innerHTML = '<br>';
-          newRow.appendChild(td);
-        }
-        table.querySelector('tbody').appendChild(newRow);
-        newRow.querySelector('td').focus();
-        onNotesChange();
+      // Shift+Tab → previous cell
+      if(idx > 0){
+        moveCursorTo(cells[idx - 1]);
       }
+      // If already at first cell, do nothing (don't leave table)
     }
-  });
+  }, true); // ← capture phase: fires before browser default
 
-  // Make table cells focusable and contenteditable
-  document.getElementById('notes-edit').addEventListener('click', e => {
-    const cell = e.target.closest('td, th');
-    if(cell && cell.closest('#notes-edit')){
-      cell.contentEditable = 'true';
+  // ── "+ Add row" button below each table ──
+  // We add it via a MutationObserver so it appears whenever a table is inserted.
+  // The button sits just after the table in the DOM, styled as a ghost row.
+  function ensureAddRowButton(table){
+    let btn = table._addRowBtn;
+    if(!btn){
+      btn = document.createElement('button');
+      btn.className = 'tbl-add-row-btn';
+      btn.contentEditable = 'false';
+      btn.textContent = '+ Add row';
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault(); // don't steal focus from editor
+        const firstNewCell = addRow(table);
+        if(firstNewCell) moveCursorTo(firstNewCell);
+      });
+      table._addRowBtn = btn;
     }
-  });
+    // Insert the button right after the table if not already there
+    if(table.nextSibling !== btn){
+      table.parentNode.insertBefore(btn, table.nextSibling);
+    }
+  }
 
-  // Save on any input inside a table cell
-  document.getElementById('notes-edit').addEventListener('input', e => {
-    if(e.target.closest('td, th')) onNotesChange();
+  // Watch for tables being added or the editor being updated
+  const obs = new MutationObserver(() => {
+    editor.querySelectorAll('table').forEach(ensureAddRowButton);
   });
+  obs.observe(editor, { childList: true, subtree: true });
+
+  // Also run once on load (in case notes already contain tables)
+  setTimeout(() => editor.querySelectorAll('table').forEach(ensureAddRowButton), 200);
 
 })();
 
@@ -374,7 +411,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   display:flex;align-items:center;justify-content:center;
   color:var(--accent);
   box-shadow:0 0 10px rgba(52,211,120,0.2);
-  transition:background .15s, box-shadow .15s;
+  transition:background .15s,box-shadow .15s;
   z-index:10;
   right:-11px;
 }
@@ -570,76 +607,81 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #toast.toast-ok{color:var(--accent);}
 #toast.toast-err{color:#ff6060;}
 
-/* ── NOTES TABLE ─────────────────────────── */
+/* ── TABLE IN NOTES ──────────────────────── */
 #notes-edit table{
   border-collapse:collapse;
-  margin:8px 0;
+  margin:10px 0;
+  table-layout:fixed;
   width:auto;
-  min-width:200px;
 }
-#notes-edit td, #notes-edit th{
-  border:0.5px solid rgba(255,255,255,0.18);
+#notes-edit td{
+  border:0.5px solid rgba(255,255,255,0.2);
   padding:6px 10px;
-  min-width:80px;
-  min-height:24px;
+  min-width:100px;
+  min-height:28px;
   vertical-align:top;
   font-size:13px;
   line-height:1.6;
-  outline:none;
+  color:var(--text-secondary);
+  word-break:break-word;
   position:relative;
 }
-#notes-edit th{
-  background:rgba(255,255,255,0.05);
-  font-weight:500;
-  color:var(--text-primary);
-}
-#notes-edit td{color:var(--text-secondary);}
-#notes-edit td:focus, #notes-edit th:focus{
+#notes-edit td:focus{
+  outline:none;
   background:rgba(52,211,120,0.06);
-  border-color:rgba(52,211,120,0.4);
+  border-color:rgba(52,211,120,0.45);
 }
-/* Tab key navigation between cells */
+/* Add-row button row */
+.tbl-add-row-btn{
+  display:block;
+  margin:0 0 8px 0;
+  padding:4px 10px;
+  font-size:11px;font-family:var(--mono);
+  color:var(--text-muted);
+  background:transparent;
+  border:0.5px dashed rgba(255,255,255,0.12);
+  border-radius:4px;
+  cursor:pointer;
+  transition:color .15s,border-color .15s;
+  width:100%;
+  text-align:left;
+}
+.tbl-add-row-btn:hover{color:var(--accent);border-color:rgba(52,211,120,0.4);}
+/* Table wrapper for context menu */
+.tbl-wrap{position:relative;display:inline-block;margin:8px 0;}
 
-/* ── TABLE INSERT PICKER ─────────────────── */
-.tbl-picker-wrap{
-  position:relative;display:inline-flex;align-items:center;
-}
+/* ── TABLE PICKER POPUP ───────────────────── */
+.tbl-picker-wrap{position:relative;display:inline-flex;align-items:center;}
 #tbl-picker{
   display:none;
   position:absolute;
-  top:calc(100% + 6px);
-  left:0;
+  top:calc(100% + 6px);left:0;
   background:rgba(14,14,14,0.98);
   border:0.5px solid var(--glass-border);
-  border-radius:10px;
-  padding:10px;
-  z-index:999;
+  border-radius:10px;padding:10px;
+  z-index:9999;
   box-shadow:0 8px 32px rgba(0,0,0,0.7);
-  flex-direction:column;
-  gap:2px;
+  flex-direction:column;gap:4px;
   user-select:none;
 }
 #tbl-picker.open{display:flex;}
-.tbl-picker-label{
-  font-size:10px;font-family:var(--mono);color:var(--text-muted);
-  text-align:center;margin-bottom:4px;letter-spacing:.04em;
+#tbl-picker-label{
+  font-size:10px;font-family:var(--mono);
+  color:var(--text-muted);text-align:center;
+  letter-spacing:.04em;
 }
 .tbl-grid{
   display:grid;
   grid-template-columns:repeat(8,18px);
-  grid-template-rows:repeat(8,18px);
   gap:2px;
 }
 .tbl-cell{
   width:18px;height:18px;border-radius:3px;
   border:0.5px solid rgba(255,255,255,0.1);
   background:rgba(255,255,255,0.03);
-  cursor:pointer;transition:background .08s,border-color .08s;
+  cursor:pointer;transition:background .06s,border-color .06s;
 }
-.tbl-cell.hover{
-  background:var(--accent-dim);
-  border-color:var(--glass-done-border);
-}
+.tbl-cell.hi{background:var(--accent-dim);border-color:var(--glass-done-border);}
 </style>
 </head>
 <body>
@@ -759,22 +801,21 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
       <div class="rt-sep"></div>
 
-      <!-- Insert table -->
+      <!-- Insert table picker -->
       <div class="tbl-picker-wrap">
-        <button class="rt-btn" id="tbl-picker-btn" title="Insert table"
-                onclick="toggleTablePicker(event)"
-                style="width:auto;padding:0 7px;gap:4px;font-size:11px;">
+        <button class="rt-btn" title="Insert table" onclick="toggleTblPicker(event)"
+                style="width:auto;padding:0 7px;font-size:11px;gap:3px;">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-            <rect x="0.5" y="0.5" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1"/>
-            <line x1="4.5" y1="0.5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".8"/>
-            <line x1="8.5" y1="0.5" x2="8.5" y2="12.5" stroke="currentColor" stroke-width=".8"/>
-            <line x1="0.5" y1="4.5" x2="12.5" y2="4.5" stroke="currentColor" stroke-width=".8"/>
-            <line x1="0.5" y1="8.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width=".8"/>
+            <rect x=".5" y=".5" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/>
+            <line x1="4.5" y1=".5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1="8.5" y1=".5" x2="8.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1=".5" y1="4.5" x2="12.5" y2="4.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1=".5" y1="8.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width=".7"/>
           </svg>
           Table
         </button>
         <div id="tbl-picker">
-          <div class="tbl-picker-label" id="tbl-picker-label">Insert table</div>
+          <div id="tbl-picker-label">Insert table</div>
           <div class="tbl-grid" id="tbl-grid"></div>
         </div>
       </div>
@@ -1693,134 +1734,171 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
 })();
 
 // ─────────────────────────────────────────────
-// TABLE INSERT (OneNote-style grid picker)
+// TABLE FEATURE
 // ─────────────────────────────────────────────
 (function(){
   const ROWS = 8, COLS = 8;
-  let _hoverR = 0, _hoverC = 0;
-  let _pickerOpen = false;
+  const editor = document.getElementById('notes-edit');
 
-  // Build the 8×8 grid cells once
+  // ── Build picker grid ──
   const grid = document.getElementById('tbl-grid');
   for(let r = 1; r <= ROWS; r++){
     for(let c = 1; c <= COLS; c++){
       const cell = document.createElement('div');
       cell.className = 'tbl-cell';
-      cell.dataset.r = r;
-      cell.dataset.c = c;
-      cell.addEventListener('mouseenter', () => updateHover(r, c));
-      cell.addEventListener('click', () => { insertTable(r, c); closePicker(); });
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => {
+        grid.querySelectorAll('.tbl-cell').forEach(el =>
+          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
+        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
+      });
+      cell.addEventListener('click', () => { doInsertTable(r, c); closePicker(); });
       grid.appendChild(cell);
     }
   }
 
-  function updateHover(r, c){
-    _hoverR = r; _hoverC = c;
-    grid.querySelectorAll('.tbl-cell').forEach(el => {
-      el.classList.toggle('hover', +el.dataset.r <= r && +el.dataset.c <= c);
-    });
-    document.getElementById('tbl-picker-label').textContent = r + ' × ' + c + ' table';
-  }
-
   function closePicker(){
     document.getElementById('tbl-picker').classList.remove('open');
-    _pickerOpen = false;
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
     document.getElementById('tbl-picker-label').textContent = 'Insert table';
-    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hover'));
   }
 
-  window.toggleTablePicker = function(e){
+  window.toggleTblPicker = function(e){
     e.stopPropagation();
-    _pickerOpen = !_pickerOpen;
-    document.getElementById('tbl-picker').classList.toggle('open', _pickerOpen);
+    document.getElementById('tbl-picker').classList.toggle('open');
   };
-
-  // Close picker when clicking outside
   document.addEventListener('click', e => {
-    if(_pickerOpen && !e.target.closest('.tbl-picker-wrap')) closePicker();
+    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
   });
 
-  // Build and insert an r×c table at the cursor position
-  function insertTable(rows, cols){
-    const editor = document.getElementById('notes-edit');
+  // ── Insert table ──
+  function doInsertTable(rows, cols){
     editor.focus();
-
-    // Build table HTML
     let html = '<table><tbody>';
     for(let r = 0; r < rows; r++){
       html += '<tr>';
-      for(let c = 0; c < cols; c++){
-        html += '<td><br></td>';
-      }
+      for(let c = 0; c < cols; c++) html += '<td><br></td>';
       html += '</tr>';
     }
-    html += '</tbody></table><p><br></p>';
-
+    html += '</tbody></table>';
     document.execCommand('insertHTML', false, html);
-    onNotesChange();
-
-    // Move cursor into first cell
+    // Place cursor in first cell
     setTimeout(() => {
-      const firstCell = editor.querySelector('td');
-      if(firstCell){
-        const range = document.createRange();
-        range.setStart(firstCell, 0);
-        range.collapse(true);
-        const sel = window.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    }, 0);
+      const first = editor.querySelector('td');
+      if(first) moveCursorTo(first);
+    }, 10);
+    if(typeof onNotesChange === 'function') onNotesChange();
   }
 
-  // Tab key navigation between table cells
-  document.getElementById('notes-edit').addEventListener('keydown', e => {
+  // ── Move cursor into a cell ──
+  function moveCursorTo(cell){
+    cell.focus();
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // ── Get all cells in a table ──
+  function getCells(table){
+    return Array.from(table.querySelectorAll('td'));
+  }
+
+  // ── Add a new row at the bottom of the table ──
+  function addRow(table){
+    const firstRow = table.querySelector('tr');
+    if(!firstRow) return null;
+    const colCount = firstRow.querySelectorAll('td').length;
+    const tr = document.createElement('tr');
+    for(let i = 0; i < colCount; i++){
+      const td = document.createElement('td');
+      td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    table.querySelector('tbody').appendChild(tr);
+    if(typeof onNotesChange === 'function') onNotesChange();
+    return tr.querySelector('td');
+  }
+
+  // ── Tab / Shift+Tab navigation — intercept at capture phase ──
+  // Using capture:true means this fires BEFORE the browser's default
+  // tab-to-next-element behaviour, letting us preventDefault reliably.
+  document.addEventListener('keydown', function(e){
     if(e.key !== 'Tab') return;
-    const cell = e.target.closest('td, th');
-    if(!cell) return;
+
+    // Find the cell the cursor is currently inside
+    const sel = window.getSelection();
+    if(!sel || sel.rangeCount === 0) return;
+    let node = sel.anchorNode;
+    // Walk up to find a td
+    let cell = null;
+    while(node && node !== editor){
+      if(node.nodeName === 'TD' || node.nodeName === 'TH'){
+        cell = node; break;
+      }
+      node = node.parentNode;
+    }
+    if(!cell) return; // not inside a table cell — let browser handle normally
+
+    // We are inside a table cell inside #notes-edit — handle it ourselves
     e.preventDefault();
+    e.stopPropagation(); // stop browser switching browser tabs
 
-    const allCells = Array.from(cell.closest('table').querySelectorAll('td, th'));
-    const idx = allCells.indexOf(cell);
+    const table = cell.closest('table');
+    const cells = getCells(table);
+    const idx   = cells.indexOf(cell);
 
-    if(e.shiftKey){
-      // Shift+Tab: go to previous cell
-      if(idx > 0){
-        allCells[idx - 1].focus();
+    if(!e.shiftKey){
+      // Tab → next cell
+      if(idx < cells.length - 1){
+        moveCursorTo(cells[idx + 1]);
+      } else {
+        // Last cell → add new row, move to first cell of it
+        const firstNewCell = addRow(table);
+        if(firstNewCell) moveCursorTo(firstNewCell);
       }
     } else {
-      if(idx < allCells.length - 1){
-        // Next cell
-        allCells[idx + 1].focus();
-      } else {
-        // Last cell: add a new row
-        const table = cell.closest('table');
-        const colCount = table.querySelector('tr').querySelectorAll('td, th').length;
-        const newRow = document.createElement('tr');
-        for(let i = 0; i < colCount; i++){
-          const td = document.createElement('td');
-          td.innerHTML = '<br>';
-          newRow.appendChild(td);
-        }
-        table.querySelector('tbody').appendChild(newRow);
-        newRow.querySelector('td').focus();
-        onNotesChange();
+      // Shift+Tab → previous cell
+      if(idx > 0){
+        moveCursorTo(cells[idx - 1]);
       }
+      // If already at first cell, do nothing (don't leave table)
     }
-  });
+  }, true); // ← capture phase: fires before browser default
 
-  // Make table cells focusable and contenteditable
-  document.getElementById('notes-edit').addEventListener('click', e => {
-    const cell = e.target.closest('td, th');
-    if(cell && cell.closest('#notes-edit')){
-      cell.contentEditable = 'true';
+  // ── "+ Add row" button below each table ──
+  // We add it via a MutationObserver so it appears whenever a table is inserted.
+  // The button sits just after the table in the DOM, styled as a ghost row.
+  function ensureAddRowButton(table){
+    let btn = table._addRowBtn;
+    if(!btn){
+      btn = document.createElement('button');
+      btn.className = 'tbl-add-row-btn';
+      btn.contentEditable = 'false';
+      btn.textContent = '+ Add row';
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault(); // don't steal focus from editor
+        const firstNewCell = addRow(table);
+        if(firstNewCell) moveCursorTo(firstNewCell);
+      });
+      table._addRowBtn = btn;
     }
-  });
+    // Insert the button right after the table if not already there
+    if(table.nextSibling !== btn){
+      table.parentNode.insertBefore(btn, table.nextSibling);
+    }
+  }
 
-  // Save on any input inside a table cell
-  document.getElementById('notes-edit').addEventListener('input', e => {
-    if(e.target.closest('td, th')) onNotesChange();
+  // Watch for tables being added or the editor being updated
+  const obs = new MutationObserver(() => {
+    editor.querySelectorAll('table').forEach(ensureAddRowButton);
   });
+  obs.observe(editor, { childList: true, subtree: true });
+
+  // Also run once on load (in case notes already contain tables)
+  setTimeout(() => editor.querySelectorAll('table').forEach(ensureAddRowButton), 200);
 
 })();
 
