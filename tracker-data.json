@@ -242,6 +242,6 @@
       "collapsed": false
     }
   ],
-  "notesPanelCollapsed": true,
-  "notes": "<div><font size=\"6\" face=\"Georgia, serif\" color=\"#ff0000\"><u style=\"background-color: rgb(0, 255, 110);\"><i><b style=\"\">ALBERT</b> </i></u></font></div><div><br></div><div><br></div><div><br></div>"
+  "notesPanelCollapsed": false,
+  "notes": "<div><font size=\"6\" face=\"Georgia, serif\" color=\"#ff0000\"><u style=\"background-color: rgb(0, 255, 110);\"><i><b style=\"\">ALBERT</b> </i></u></font></div><div><br></div><div><br></div><div><table><tbody><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr><tr><td><br></td><td><br></td><td><br></td></tr></tbody></table><button class=\"tbl-add-row-btn\" contenteditable=\"false\">+ Add row</button></div>"
 }
