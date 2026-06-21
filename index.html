@@ -744,6 +744,7 @@ function saveGithubConfig(){
     showToast('Fill in username, repo, and token.','err'); return;
   }
   saveConfig(cfg);
+  _lastKnownSha = null;   // new repo/branch/token → discard any cached SHA
   closeModal('modal-github');
   showToast('Config saved. Use the Save button to push data.','ok');
 }
@@ -790,6 +791,12 @@ function loadLocal(){
 // ─────────────────────────────────────────────
 // GITHUB API
 // ─────────────────────────────────────────────
+// Holds the SHA returned by the most recent successful save. GitHub's contents
+// GET can briefly return a stale SHA right after a write, which is what made the
+// second save fail with a 409. Reusing the SHA that the PUT hands back (always
+// the authoritative one for the commit we just made) avoids that race entirely.
+let _lastKnownSha = null;
+
 async function githubPush(){
   const cfg = loadConfig();
   if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
@@ -797,11 +804,11 @@ async function githubPush(){
   const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
   const authHeader = { 'Authorization': `token ${cfg.token}` };
 
-  // Always bust the cache when fetching SHA — without this, the second save
-  // gets a stale SHA from GitHub's CDN and fails with a 409 conflict.
+  // Fetch the current SHA straight from the origin, bypassing every cache.
   async function freshSha(){
     const r = await fetch(`${apiBase}?ref=${cfg.branch}&t=${Date.now()}`, {
-      headers: { ...authHeader, 'Cache-Control': 'no-cache' }
+      headers: { ...authHeader, 'Cache-Control': 'no-cache' },
+      cache: 'no-store'
     });
     if(r.ok){ const d = await r.json(); return d.sha; }
     if(r.status === 404) return null; // file doesn't exist yet
@@ -825,20 +832,31 @@ async function githubPush(){
   }
 
   try{
-    let sha = await freshSha();
+    // Prefer the SHA from the last successful save; only hit the network for it
+    // on the first save of the session (or after an error reset it to null).
+    let sha = _lastKnownSha !== null ? _lastKnownSha : await freshSha();
     let res = await put(sha);
 
-    // 409 = SHA conflict (race or stale cache despite bust) — retry once
+    // 409 = SHA conflict — our SHA was stale. Force a fresh one and retry once.
     if(res.status === 409){
       await new Promise(r => setTimeout(r, 600));
       sha = await freshSha();
       res = await put(sha);
     }
 
-    if(res.ok) return { ok: true };
+    if(res.ok){
+      // Remember the new SHA the PUT returns so the next save can reuse it.
+      try{
+        const d = await res.json();
+        _lastKnownSha = (d && d.content && d.content.sha) ? d.content.sha : null;
+      } catch(e){ _lastKnownSha = null; }
+      return { ok: true };
+    }
+    _lastKnownSha = null; // reset so the next attempt re-fetches a clean SHA
     const txt = await res.text();
     return { ok: false, msg: `GitHub error ${res.status}: ${txt.slice(0,200)}` };
   } catch(e){
+    _lastKnownSha = null;
     return { ok: false, msg: e.message };
   }
 }
@@ -846,11 +864,22 @@ async function githubPush(){
 async function githubPull(){
   if(IS_VIEWER){
     const [owner, repo, branch] = _viewParam.split('/');
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${DATA_PATH}?t=${Date.now()}`;
+    // Read through the GitHub API rather than raw.githubusercontent.com. The raw
+    // CDN ignores cache-busting query params and can serve content that is
+    // several minutes stale, and different edge nodes can hold different
+    // versions — that's what made the notes appear on one refresh and vanish on
+    // the next. The API works on public repos without a token and reflects
+    // commits within seconds.
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${DATA_PATH}?ref=${branch}&t=${Date.now()}`;
     try{
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        cache: 'no-store'
+      });
       if(!res.ok) return { ok: false, msg: `Could not load data (${res.status}). Is the repo public?` };
-      state = await res.json();
+      const data = await res.json();
+      const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+      state = JSON.parse(decoded);
       _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
       return { ok: true };
     } catch(e){
@@ -862,10 +891,14 @@ async function githubPull(){
   if(!cfg.token) return { ok: false, msg: 'No config.' };
   const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}?ref=${cfg.branch}&t=${Date.now()}`;
   try{
-    const res = await fetch(url, { headers:{ 'Authorization': `token ${cfg.token}` } });
+    const res = await fetch(url, {
+      headers:{ 'Authorization': `token ${cfg.token}` },
+      cache: 'no-store'
+    });
     if(res.status === 404) return { ok: true, fresh: true };
     if(!res.ok) return { ok: false, msg: `GitHub error ${res.status}` };
     const data = await res.json();
+    _lastKnownSha = data.sha || null;   // seed the SHA cache so the first save is conflict-free
     const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
     state = JSON.parse(decoded);
     _nextId = Math.max(0, ...state.nodes.map(n => n.id), 0) + 1;
