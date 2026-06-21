@@ -12,13 +12,12 @@
 // TABLE FEATURE
 // ─────────────────────────────────────────────
 (function(){
-  const ROWS = 8, COLS = 8;
   const editor = document.getElementById('notes-edit');
 
   // ── Picker grid ──────────────────────────────
   const grid = document.getElementById('tbl-grid');
-  for(let r = 1; r <= ROWS; r++){
-    for(let c = 1; c <= COLS; c++){
+  for(let r = 1; r <= 8; r++){
+    for(let c = 1; c <= 8; c++){
       const cell = document.createElement('div');
       cell.className = 'tbl-cell';
       cell.dataset.r = r; cell.dataset.c = c;
@@ -55,11 +54,9 @@
     html += '</tbody></table>';
     document.execCommand('insertHTML', false, html);
     setTimeout(() => {
-      // Place cursor in first cell
       const first = editor.querySelector('table:last-of-type td');
       if(first) focusCell(first);
-      // Attach add-row buttons to all tables that don't have one yet
-      attachAddRowButtons();
+      syncAddRowButtons();
     }, 10);
     if(typeof onNotesChange === 'function') onNotesChange();
   }
@@ -67,15 +64,14 @@
   // ── Focus a cell ─────────────────────────────
   function focusCell(cell){
     cell.focus();
-    const range = document.createRange();
-    range.selectNodeContents(cell);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    const r = document.createRange();
+    r.selectNodeContents(cell);
+    r.collapse(false);
+    const s = window.getSelection();
+    s.removeAllRanges(); s.addRange(r);
   }
 
-  // ── Add a row to a table, return first cell ──
+  // ── Add a row, return first cell ─────────────
   function addRow(table){
     const cols = table.querySelector('tr').querySelectorAll('td').length;
     const tr = document.createElement('tr');
@@ -89,41 +85,75 @@
   }
 
   // ── ONE add-row button per table ─────────────
-  // The button is placed immediately after the <table> element.
-  // We track which tables already have a button via a WeakSet.
+  // Key insight: buttons are inserted OUTSIDE the editor's contenteditable
+  // area, so they never get serialised into state.notes and never appear
+  // in renderPreview. They live in the DOM between the table and the next
+  // sibling but are not children of #notes-edit.
+  //
+  // Wait — contenteditable means everything inside #notes-edit IS editable
+  // and saved. So we keep buttons INSIDE but mark them with a data attribute
+  // and strip them in onNotesChange before saving, and in renderPreview.
+
   const _attached = new WeakSet();
-  function attachAddRowButtons(){
-    if(IS_VIEWER) return; // never show in viewer mode
+
+  function syncAddRowButtons(){
+    if(IS_VIEWER) return;
     editor.querySelectorAll('table').forEach(table => {
-      if(_attached.has(table)) return; // already done
+      if(_attached.has(table)) return;
       _attached.add(table);
+
       const btn = document.createElement('button');
       btn.className = 'tbl-add-row';
-      btn.textContent = '+ Add row';
+      btn.setAttribute('data-tbl-ui', '1'); // marks it as UI-only
       btn.contentEditable = 'false';
+      btn.textContent = '+ Add row';
       btn.addEventListener('mousedown', e => {
-        e.preventDefault(); // keep editor focus
-        const firstNewCell = addRow(table);
-        focusCell(firstNewCell);
+        e.preventDefault();
+        focusCell(addRow(table));
       });
-      // Insert the button right after the table
+      // Place immediately after the table inside the editor
       table.insertAdjacentElement('afterend', btn);
+    });
+
+    // Remove any orphaned buttons (whose table was deleted)
+    editor.querySelectorAll('.tbl-add-row').forEach(btn => {
+      const prev = btn.previousElementSibling;
+      if(!prev || prev.tagName !== 'TABLE') btn.remove();
     });
   }
 
-  // Watch for new tables inserted into the editor
-  const obs = new MutationObserver(attachAddRowButtons);
+  // Strip UI buttons from HTML before saving or previewing
+  function stripUiElements(html){
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    div.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
+    return div.innerHTML;
+  }
+
+  // Patch onNotesChange to strip buttons before saving
+  const _origOnChange = window.onNotesChange;
+  window.onNotesChange = function(){
+    if(IS_VIEWER) return;
+    state.notes = stripUiElements(editor.innerHTML);
+    stashLocal(); markDirty();
+  };
+
+  // Patch renderPreview to strip buttons
+  const _origRenderPreview = window.renderPreview;
+  window.renderPreview = function(){
+    const clone = editor.cloneNode(true);
+    clone.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
+    document.getElementById('notes-preview').innerHTML = clone.innerHTML;
+  };
+
+  // Watch for tables added dynamically
+  const obs = new MutationObserver(() => syncAddRowButtons());
   obs.observe(editor, { childList: true, subtree: true });
-  // Run once on load (for tables already in saved notes)
-  setTimeout(attachAddRowButtons, 300);
+  setTimeout(syncAddRowButtons, 300);
 
   // ── Tab / Shift+Tab between cells ────────────
-  // Using capture:true fires BEFORE the browser's tab-to-next-element
-  // behaviour, so we can preventDefault reliably without the browser
-  // switching to the address bar or next browser tab.
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Tab') return;
-    // Find td/th the cursor is in
     const sel = window.getSelection();
     if(!sel || !sel.rangeCount) return;
     let node = sel.anchorNode;
@@ -132,27 +162,17 @@
       if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
       node = node.parentNode;
     }
-    if(!cell) return; // not in a table — let browser handle
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const table = cell.closest('table');
-    const cells = Array.from(table.querySelectorAll('td, th'));
-    const idx   = cells.indexOf(cell);
-
+    if(!cell) return;
+    e.preventDefault(); e.stopPropagation();
+    const cells = Array.from(cell.closest('table').querySelectorAll('td,th'));
+    const idx = cells.indexOf(cell);
     if(!e.shiftKey){
-      // Tab → next cell, or new row if at end
-      if(idx < cells.length - 1){
-        focusCell(cells[idx + 1]);
-      } else {
-        focusCell(addRow(table));
-      }
+      if(idx < cells.length - 1) focusCell(cells[idx + 1]);
+      else focusCell(addRow(cell.closest('table')));
     } else {
-      // Shift+Tab → previous cell (stay put at first)
       if(idx > 0) focusCell(cells[idx - 1]);
     }
-  }, true); // capture phase
+  }, true);
 
 })();
 
@@ -520,6 +540,15 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #notes-preview a{color:var(--accent);text-decoration:none}
 #notes-preview strong{color:var(--text-primary);font-weight:500}
 #notes-preview hr{border:none;border-top:0.5px solid var(--glass-border);margin:1em 0}
+#notes-preview table{border-collapse:collapse;margin:10px 0;width:auto;}
+#notes-preview td,#notes-preview th{
+  border:0.5px solid rgba(255,255,255,0.18);
+  padding:6px 10px;min-width:80px;
+  vertical-align:top;font-size:13px;line-height:1.6;
+  color:var(--text-secondary);word-break:break-word;
+}
+#notes-preview th{background:rgba(255,255,255,0.05);color:var(--text-primary);font-weight:500;}
+#notes-preview .tbl-add-row{display:none!important;}
 
 /* MODAL */
 .modal-overlay{
@@ -586,45 +615,33 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #toast.toast-ok{color:var(--accent);}
 #toast.toast-err{color:#ff6060;}
 
-/* ── NOTES TABLE ─────────────────────────── */
-#notes-edit table{
-  border-collapse:collapse;
-  margin:10px 0;
-  width:auto;
-}
+/* ── TABLE IN EDITOR ─────────────────────── */
+#notes-edit table{border-collapse:collapse;margin:10px 0;width:auto;}
 #notes-edit td{
   border:0.5px solid rgba(255,255,255,0.18);
-  padding:6px 10px;
-  min-width:100px;
-  vertical-align:top;
-  font-size:13px;
-  line-height:1.6;
-  color:var(--text-secondary);
-  word-break:break-word;
+  padding:6px 10px;min-width:100px;
+  vertical-align:top;font-size:13px;line-height:1.6;
+  color:var(--text-secondary);word-break:break-word;
 }
 #notes-edit td:focus{
   outline:none;
   background:rgba(52,211,120,0.06);
   border-color:rgba(52,211,120,0.4);
 }
-/* ONE add-row button per table, sits below it */
 .tbl-add-row{
   display:inline-block;
-  margin:2px 0 10px 0;
-  padding:3px 10px;
+  margin:2px 0 10px;padding:3px 10px;
   font-size:11px;font-family:var(--mono);
   color:var(--text-muted);
   background:transparent;
   border:0.5px dashed rgba(255,255,255,0.12);
-  border-radius:4px;
-  cursor:pointer;
+  border-radius:4px;cursor:pointer;
   transition:color .15s,border-color .15s;
 }
 .tbl-add-row:hover{color:var(--accent);border-color:rgba(52,211,120,0.4);}
-/* Hide in viewer mode */
 body.viewer-mode .tbl-add-row{display:none!important;}
 
-/* ── TABLE PICKER ─────────────────────────── */
+/* ── TABLE PICKER ────────────────────────── */
 .tbl-picker-wrap{position:relative;display:inline-flex;align-items:center;}
 #tbl-picker{
   display:none;position:absolute;
@@ -632,16 +649,11 @@ body.viewer-mode .tbl-add-row{display:none!important;}
   background:rgba(14,14,14,0.98);
   border:0.5px solid var(--glass-border);
   border-radius:10px;padding:10px;
-  z-index:9999;
-  box-shadow:0 8px 32px rgba(0,0,0,0.7);
-  flex-direction:column;gap:4px;
-  user-select:none;
+  z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.7);
+  flex-direction:column;gap:4px;user-select:none;
 }
 #tbl-picker.open{display:flex;}
-#tbl-picker-label{
-  font-size:10px;font-family:var(--mono);
-  color:var(--text-muted);text-align:center;letter-spacing:.04em;
-}
+#tbl-picker-label{font-size:10px;font-family:var(--mono);color:var(--text-muted);text-align:center;letter-spacing:.04em;}
 .tbl-grid{display:grid;grid-template-columns:repeat(8,18px);gap:2px;}
 .tbl-cell{
   width:18px;height:18px;border-radius:3px;
@@ -768,8 +780,7 @@ body.viewer-mode .tbl-add-row{display:none!important;}
       <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
       <div class="rt-sep"></div>
       <div class="tbl-picker-wrap">
-        <button class="rt-btn" title="Insert table" onclick="toggleTblPicker(event)"
-                style="width:auto;padding:0 7px;font-size:11px;gap:3px;">
+        <button class="rt-btn" title="Insert table" onclick="toggleTblPicker(event)" style="width:auto;padding:0 7px;font-size:11px;gap:3px;">
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
             <rect x=".5" y=".5" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/>
             <line x1="4.5" y1=".5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
@@ -1141,19 +1152,28 @@ function buildHeader(){
 
   if(IS_VIEWER){
     document.getElementById('viewer-banner').classList.add('visible');
-    // Viewer header is intentionally empty — no buttons, no share, nothing.
-    // Disable editor, hide toolbar, hide Edit/Preview tabs, show preview.
+    const btnRefresh = document.createElement('button');
+    btnRefresh.className = 'btn';
+    btnRefresh.textContent = '↻ Refresh';
+    btnRefresh.onclick = async () => {
+      btnRefresh.disabled = true;
+      btnRefresh.textContent = 'Loading…';
+      const r = await githubPull();
+      if(r.ok){ render(); showToast('Refreshed','ok'); }
+      else showToast(r.msg,'err');
+      btnRefresh.disabled = false;
+      btnRefresh.textContent = '↻ Refresh';
+    };
+    actions.appendChild(btnRefresh);
+    // Disable editor — viewer sees rendered preview only
     const editor = document.getElementById('notes-edit');
     editor.contentEditable = 'false';
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
-    // Hide the Edit/Preview tab buttons
     const noteTabs = document.querySelector('.notes-tabs');
     if(noteTabs) noteTabs.style.display = 'none';
-    // Hide the X close button in notes header
     const closeBtn = document.querySelector('.notes-header .icon-btn');
     if(closeBtn) closeBtn.style.display = 'none';
-    // Switch straight to preview
     setTimeout(() => switchTab('preview'), 50);
   } else {
     const statusEl = document.createElement('span');
@@ -1402,10 +1422,11 @@ function switchTab(tab){
 }
 
 function renderPreview(){
-  // Preview strips HTML formatting and shows markdown rendered from plain text
-  // For rich HTML notes we just show the raw HTML in the preview pane
-  const raw = document.getElementById('notes-edit').innerHTML;
-  document.getElementById('notes-preview').innerHTML = raw;
+  // Clone the editor content so we can strip edit-only elements before display
+  const clone = document.getElementById('notes-edit').cloneNode(true);
+  // Remove add-row buttons — they are editor-only, not part of the content
+  clone.querySelectorAll('.tbl-add-row').forEach(el => el.remove());
+  document.getElementById('notes-preview').innerHTML = clone.innerHTML;
 }
 
 // ─────────────────────────────────────────────
@@ -1698,13 +1719,12 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
 // TABLE FEATURE
 // ─────────────────────────────────────────────
 (function(){
-  const ROWS = 8, COLS = 8;
   const editor = document.getElementById('notes-edit');
 
   // ── Picker grid ──────────────────────────────
   const grid = document.getElementById('tbl-grid');
-  for(let r = 1; r <= ROWS; r++){
-    for(let c = 1; c <= COLS; c++){
+  for(let r = 1; r <= 8; r++){
+    for(let c = 1; c <= 8; c++){
       const cell = document.createElement('div');
       cell.className = 'tbl-cell';
       cell.dataset.r = r; cell.dataset.c = c;
@@ -1741,11 +1761,9 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
     html += '</tbody></table>';
     document.execCommand('insertHTML', false, html);
     setTimeout(() => {
-      // Place cursor in first cell
       const first = editor.querySelector('table:last-of-type td');
       if(first) focusCell(first);
-      // Attach add-row buttons to all tables that don't have one yet
-      attachAddRowButtons();
+      syncAddRowButtons();
     }, 10);
     if(typeof onNotesChange === 'function') onNotesChange();
   }
@@ -1753,15 +1771,14 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
   // ── Focus a cell ─────────────────────────────
   function focusCell(cell){
     cell.focus();
-    const range = document.createRange();
-    range.selectNodeContents(cell);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    const r = document.createRange();
+    r.selectNodeContents(cell);
+    r.collapse(false);
+    const s = window.getSelection();
+    s.removeAllRanges(); s.addRange(r);
   }
 
-  // ── Add a row to a table, return first cell ──
+  // ── Add a row, return first cell ─────────────
   function addRow(table){
     const cols = table.querySelector('tr').querySelectorAll('td').length;
     const tr = document.createElement('tr');
@@ -1775,41 +1792,75 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
   }
 
   // ── ONE add-row button per table ─────────────
-  // The button is placed immediately after the <table> element.
-  // We track which tables already have a button via a WeakSet.
+  // Key insight: buttons are inserted OUTSIDE the editor's contenteditable
+  // area, so they never get serialised into state.notes and never appear
+  // in renderPreview. They live in the DOM between the table and the next
+  // sibling but are not children of #notes-edit.
+  //
+  // Wait — contenteditable means everything inside #notes-edit IS editable
+  // and saved. So we keep buttons INSIDE but mark them with a data attribute
+  // and strip them in onNotesChange before saving, and in renderPreview.
+
   const _attached = new WeakSet();
-  function attachAddRowButtons(){
-    if(IS_VIEWER) return; // never show in viewer mode
+
+  function syncAddRowButtons(){
+    if(IS_VIEWER) return;
     editor.querySelectorAll('table').forEach(table => {
-      if(_attached.has(table)) return; // already done
+      if(_attached.has(table)) return;
       _attached.add(table);
+
       const btn = document.createElement('button');
       btn.className = 'tbl-add-row';
-      btn.textContent = '+ Add row';
+      btn.setAttribute('data-tbl-ui', '1'); // marks it as UI-only
       btn.contentEditable = 'false';
+      btn.textContent = '+ Add row';
       btn.addEventListener('mousedown', e => {
-        e.preventDefault(); // keep editor focus
-        const firstNewCell = addRow(table);
-        focusCell(firstNewCell);
+        e.preventDefault();
+        focusCell(addRow(table));
       });
-      // Insert the button right after the table
+      // Place immediately after the table inside the editor
       table.insertAdjacentElement('afterend', btn);
+    });
+
+    // Remove any orphaned buttons (whose table was deleted)
+    editor.querySelectorAll('.tbl-add-row').forEach(btn => {
+      const prev = btn.previousElementSibling;
+      if(!prev || prev.tagName !== 'TABLE') btn.remove();
     });
   }
 
-  // Watch for new tables inserted into the editor
-  const obs = new MutationObserver(attachAddRowButtons);
+  // Strip UI buttons from HTML before saving or previewing
+  function stripUiElements(html){
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    div.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
+    return div.innerHTML;
+  }
+
+  // Patch onNotesChange to strip buttons before saving
+  const _origOnChange = window.onNotesChange;
+  window.onNotesChange = function(){
+    if(IS_VIEWER) return;
+    state.notes = stripUiElements(editor.innerHTML);
+    stashLocal(); markDirty();
+  };
+
+  // Patch renderPreview to strip buttons
+  const _origRenderPreview = window.renderPreview;
+  window.renderPreview = function(){
+    const clone = editor.cloneNode(true);
+    clone.querySelectorAll('[data-tbl-ui]').forEach(el => el.remove());
+    document.getElementById('notes-preview').innerHTML = clone.innerHTML;
+  };
+
+  // Watch for tables added dynamically
+  const obs = new MutationObserver(() => syncAddRowButtons());
   obs.observe(editor, { childList: true, subtree: true });
-  // Run once on load (for tables already in saved notes)
-  setTimeout(attachAddRowButtons, 300);
+  setTimeout(syncAddRowButtons, 300);
 
   // ── Tab / Shift+Tab between cells ────────────
-  // Using capture:true fires BEFORE the browser's tab-to-next-element
-  // behaviour, so we can preventDefault reliably without the browser
-  // switching to the address bar or next browser tab.
   document.addEventListener('keydown', function(e){
     if(e.key !== 'Tab') return;
-    // Find td/th the cursor is in
     const sel = window.getSelection();
     if(!sel || !sel.rangeCount) return;
     let node = sel.anchorNode;
@@ -1818,27 +1869,17 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
       if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
       node = node.parentNode;
     }
-    if(!cell) return; // not in a table — let browser handle
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    const table = cell.closest('table');
-    const cells = Array.from(table.querySelectorAll('td, th'));
-    const idx   = cells.indexOf(cell);
-
+    if(!cell) return;
+    e.preventDefault(); e.stopPropagation();
+    const cells = Array.from(cell.closest('table').querySelectorAll('td,th'));
+    const idx = cells.indexOf(cell);
     if(!e.shiftKey){
-      // Tab → next cell, or new row if at end
-      if(idx < cells.length - 1){
-        focusCell(cells[idx + 1]);
-      } else {
-        focusCell(addRow(table));
-      }
+      if(idx < cells.length - 1) focusCell(cells[idx + 1]);
+      else focusCell(addRow(cell.closest('table')));
     } else {
-      // Shift+Tab → previous cell (stay put at first)
       if(idx > 0) focusCell(cells[idx - 1]);
     }
-  }, true); // capture phase
+  }, true);
 
 })();
 
