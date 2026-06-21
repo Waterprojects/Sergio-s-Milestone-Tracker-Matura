@@ -7,7 +7,156 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+// ─────────────────────────────────────────────
+// TABLE FEATURE
+// ─────────────────────────────────────────────
+(function(){
+  const ROWS = 8, COLS = 8;
+  const editor = document.getElementById('notes-edit');
+
+  // ── Picker grid ──────────────────────────────
+  const grid = document.getElementById('tbl-grid');
+  for(let r = 1; r <= ROWS; r++){
+    for(let c = 1; c <= COLS; c++){
+      const cell = document.createElement('div');
+      cell.className = 'tbl-cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => {
+        grid.querySelectorAll('.tbl-cell').forEach(el =>
+          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
+        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
+      });
+      cell.addEventListener('click', () => { doInsert(r, c); closePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  function closePicker(){
+    document.getElementById('tbl-picker').classList.remove('open');
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
+    document.getElementById('tbl-picker-label').textContent = 'Insert table';
+  }
+  window.toggleTblPicker = function(e){
+    e.stopPropagation();
+    document.getElementById('tbl-picker').classList.toggle('open');
+  };
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
+  });
+
+  // ── Insert table ─────────────────────────────
+  function doInsert(rows, cols){
+    editor.focus();
+    let html = '<table><tbody>';
+    for(let r = 0; r < rows; r++){
+      html += '<tr>' + '<td><br></td>'.repeat(cols) + '</tr>';
+    }
+    html += '</tbody></table>';
+    document.execCommand('insertHTML', false, html);
+    setTimeout(() => {
+      // Place cursor in first cell
+      const first = editor.querySelector('table:last-of-type td');
+      if(first) focusCell(first);
+      // Attach add-row buttons to all tables that don't have one yet
+      attachAddRowButtons();
+    }, 10);
+    if(typeof onNotesChange === 'function') onNotesChange();
+  }
+
+  // ── Focus a cell ─────────────────────────────
+  function focusCell(cell){
+    cell.focus();
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // ── Add a row to a table, return first cell ──
+  function addRow(table){
+    const cols = table.querySelector('tr').querySelectorAll('td').length;
+    const tr = document.createElement('tr');
+    for(let i = 0; i < cols; i++){
+      const td = document.createElement('td'); td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    table.querySelector('tbody').appendChild(tr);
+    if(typeof onNotesChange === 'function') onNotesChange();
+    return tr.querySelector('td');
+  }
+
+  // ── ONE add-row button per table ─────────────
+  // The button is placed immediately after the <table> element.
+  // We track which tables already have a button via a WeakSet.
+  const _attached = new WeakSet();
+  function attachAddRowButtons(){
+    if(IS_VIEWER) return; // never show in viewer mode
+    editor.querySelectorAll('table').forEach(table => {
+      if(_attached.has(table)) return; // already done
+      _attached.add(table);
+      const btn = document.createElement('button');
+      btn.className = 'tbl-add-row';
+      btn.textContent = '+ Add row';
+      btn.contentEditable = 'false';
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault(); // keep editor focus
+        const firstNewCell = addRow(table);
+        focusCell(firstNewCell);
+      });
+      // Insert the button right after the table
+      table.insertAdjacentElement('afterend', btn);
+    });
+  }
+
+  // Watch for new tables inserted into the editor
+  const obs = new MutationObserver(attachAddRowButtons);
+  obs.observe(editor, { childList: true, subtree: true });
+  // Run once on load (for tables already in saved notes)
+  setTimeout(attachAddRowButtons, 300);
+
+  // ── Tab / Shift+Tab between cells ────────────
+  // Using capture:true fires BEFORE the browser's tab-to-next-element
+  // behaviour, so we can preventDefault reliably without the browser
+  // switching to the address bar or next browser tab.
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Tab') return;
+    // Find td/th the cursor is in
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount) return;
+    let node = sel.anchorNode;
+    let cell = null;
+    while(node && node !== editor){
+      if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
+      node = node.parentNode;
+    }
+    if(!cell) return; // not in a table — let browser handle
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const table = cell.closest('table');
+    const cells = Array.from(table.querySelectorAll('td, th'));
+    const idx   = cells.indexOf(cell);
+
+    if(!e.shiftKey){
+      // Tab → next cell, or new row if at end
+      if(idx < cells.length - 1){
+        focusCell(cells[idx + 1]);
+      } else {
+        focusCell(addRow(table));
+      }
+    } else {
+      // Shift+Tab → previous cell (stay put at first)
+      if(idx > 0) focusCell(cells[idx - 1]);
+    }
+  }, true); // capture phase
+
+})();
+
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -180,7 +329,6 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
 body.viewer-mode .node{cursor:default;}
 body.viewer-mode .node:hover{transform:none;}
 body.viewer-mode .node-check{pointer-events:none;cursor:default;}
-body.viewer-mode .tbl-add-row-btn{display:none!important;}
 
 /* shared fixed toolbar */
 #node-toolbar{
@@ -234,26 +382,27 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
 .notes-toggle{
   position:absolute;
   top:50%;transform:translateY(-50%);
-  width:18px;height:40px;
-  background:rgba(255,255,255,0.04);
-  border:0.5px solid var(--glass-border);
-  border-radius:4px;
+  width:22px;height:52px;
+  background:var(--accent-dim);
+  border:0.5px solid var(--glass-done-border);
+  border-radius:5px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  color:var(--text-muted);
-  transition:background .15s, color .15s;
+  color:var(--accent);
+  box-shadow:0 0 10px rgba(52,211,120,0.2);
+  transition:background .15s,box-shadow .15s;
   z-index:10;
-  right:-9px;
+  right:-11px;
 }
-.notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
+.notes-toggle:hover{background:rgba(52,211,120,0.28);box-shadow:0 0 16px rgba(52,211,120,0.35);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
 .notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
 .notes-panel{
-  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
+  width:72vw;min-width:480px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
   transition:width .35s cubic-bezier(.4,0,.2,1);
 }
-.notes-panel.collapsed{width:0;}
+.notes-panel.collapsed{width:0;min-width:0;}
 .notes-panel.collapsed .notes-header,
 .notes-panel.collapsed .notes-body{ opacity:0; pointer-events:none; }
 
@@ -261,7 +410,7 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
   padding:14px 20px 12px;border-bottom:0.5px solid var(--glass-border);
   display:flex;align-items:center;gap:8px;flex-shrink:0;
   transition:opacity .2s;
-  min-width:340px;
+  min-width:0;
 }
 .notes-header span{font-size:12px;color:var(--text-secondary);font-weight:400}
 .notes-tabs{display:flex;gap:4px;margin-left:auto}
@@ -272,7 +421,7 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
 }
 .tab-btn.active{background:var(--glass-hover);border-color:var(--glass-border);color:var(--text-primary);}
 
-.notes-body{flex:1;overflow:hidden;position:relative;min-width:340px;transition:opacity .2s;display:flex;flex-direction:column;}
+.notes-body{flex:1;overflow:hidden;position:relative;min-width:0;transition:opacity .2s;display:flex;flex-direction:column;}
 
 /* RICH TEXT TOOLBAR */
 .rich-toolbar{
@@ -281,7 +430,7 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
   border-bottom:0.5px solid var(--glass-border);
   background:rgba(255,255,255,0.02);
   flex-shrink:0;
-  min-width:340px;
+  min-width:0;
 }
 .rich-toolbar.hidden{display:none;}
 .rt-btn{
@@ -436,6 +585,71 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #toast.toast-ok{color:var(--accent);}
 #toast.toast-err{color:#ff6060;}
+
+/* ── NOTES TABLE ─────────────────────────── */
+#notes-edit table{
+  border-collapse:collapse;
+  margin:10px 0;
+  width:auto;
+}
+#notes-edit td{
+  border:0.5px solid rgba(255,255,255,0.18);
+  padding:6px 10px;
+  min-width:100px;
+  vertical-align:top;
+  font-size:13px;
+  line-height:1.6;
+  color:var(--text-secondary);
+  word-break:break-word;
+}
+#notes-edit td:focus{
+  outline:none;
+  background:rgba(52,211,120,0.06);
+  border-color:rgba(52,211,120,0.4);
+}
+/* ONE add-row button per table, sits below it */
+.tbl-add-row{
+  display:inline-block;
+  margin:2px 0 10px 0;
+  padding:3px 10px;
+  font-size:11px;font-family:var(--mono);
+  color:var(--text-muted);
+  background:transparent;
+  border:0.5px dashed rgba(255,255,255,0.12);
+  border-radius:4px;
+  cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.tbl-add-row:hover{color:var(--accent);border-color:rgba(52,211,120,0.4);}
+/* Hide in viewer mode */
+body.viewer-mode .tbl-add-row{display:none!important;}
+
+/* ── TABLE PICKER ─────────────────────────── */
+.tbl-picker-wrap{position:relative;display:inline-flex;align-items:center;}
+#tbl-picker{
+  display:none;position:absolute;
+  top:calc(100% + 6px);left:0;
+  background:rgba(14,14,14,0.98);
+  border:0.5px solid var(--glass-border);
+  border-radius:10px;padding:10px;
+  z-index:9999;
+  box-shadow:0 8px 32px rgba(0,0,0,0.7);
+  flex-direction:column;gap:4px;
+  user-select:none;
+}
+#tbl-picker.open{display:flex;}
+#tbl-picker-label{
+  font-size:10px;font-family:var(--mono);
+  color:var(--text-muted);text-align:center;letter-spacing:.04em;
+}
+.tbl-grid{display:grid;grid-template-columns:repeat(8,18px);gap:2px;}
+.tbl-cell{
+  width:18px;height:18px;border-radius:3px;
+  border:0.5px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.03);
+  cursor:pointer;transition:background .06s,border-color .06s;
+}
+.tbl-cell.hi{background:var(--accent-dim);border-color:var(--glass-done-border);}
 </style>
 </head>
 <body>
@@ -552,6 +766,24 @@ body.viewer-mode .tbl-add-row-btn{display:none!important;}
 
       <!-- Clear formatting -->
       <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
+      <div class="rt-sep"></div>
+      <div class="tbl-picker-wrap">
+        <button class="rt-btn" title="Insert table" onclick="toggleTblPicker(event)"
+                style="width:auto;padding:0 7px;font-size:11px;gap:3px;">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+            <rect x=".5" y=".5" width="12" height="12" rx="1.5" stroke="currentColor" stroke-width="1"/>
+            <line x1="4.5" y1=".5" x2="4.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1="8.5" y1=".5" x2="8.5" y2="12.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1=".5" y1="4.5" x2="12.5" y2="4.5" stroke="currentColor" stroke-width=".7"/>
+            <line x1=".5" y1="8.5" x2="12.5" y2="8.5" stroke="currentColor" stroke-width=".7"/>
+          </svg>
+          Table
+        </button>
+        <div id="tbl-picker">
+          <div id="tbl-picker-label">Insert table</div>
+          <div class="tbl-grid" id="tbl-grid"></div>
+        </div>
+      </div>
     </div>
 
     <div class="notes-body">
@@ -909,24 +1141,20 @@ function buildHeader(){
 
   if(IS_VIEWER){
     document.getElementById('viewer-banner').classList.add('visible');
-    const btnRefresh = document.createElement('button');
-    btnRefresh.className = 'btn';
-    btnRefresh.textContent = '↻ Refresh';
-    btnRefresh.onclick = async () => {
-      btnRefresh.disabled = true;
-      btnRefresh.textContent = 'Loading…';
-      const r = await githubPull();
-      if(r.ok){ render(); showToast('Refreshed','ok'); }
-      else showToast(r.msg,'err');
-      btnRefresh.disabled = false;
-      btnRefresh.textContent = '↻ Refresh';
-    };
-    actions.appendChild(btnRefresh);
-    // Disable editor in viewer mode
+    // Viewer header is intentionally empty — no buttons, no share, nothing.
+    // Disable editor, hide toolbar, hide Edit/Preview tabs, show preview.
     const editor = document.getElementById('notes-edit');
     editor.contentEditable = 'false';
     editor.style.cursor = 'default';
     document.getElementById('rich-toolbar').classList.add('hidden');
+    // Hide the Edit/Preview tab buttons
+    const noteTabs = document.querySelector('.notes-tabs');
+    if(noteTabs) noteTabs.style.display = 'none';
+    // Hide the X close button in notes header
+    const closeBtn = document.querySelector('.notes-header .icon-btn');
+    if(closeBtn) closeBtn.style.display = 'none';
+    // Switch straight to preview
+    setTimeout(() => switchTab('preview'), 50);
   } else {
     const statusEl = document.createElement('span');
     statusEl.id = 'save-status';
@@ -1465,6 +1693,155 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
     }
   }
 })();
+
+// ─────────────────────────────────────────────
+// TABLE FEATURE
+// ─────────────────────────────────────────────
+(function(){
+  const ROWS = 8, COLS = 8;
+  const editor = document.getElementById('notes-edit');
+
+  // ── Picker grid ──────────────────────────────
+  const grid = document.getElementById('tbl-grid');
+  for(let r = 1; r <= ROWS; r++){
+    for(let c = 1; c <= COLS; c++){
+      const cell = document.createElement('div');
+      cell.className = 'tbl-cell';
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.addEventListener('mouseenter', () => {
+        grid.querySelectorAll('.tbl-cell').forEach(el =>
+          el.classList.toggle('hi', +el.dataset.r <= r && +el.dataset.c <= c));
+        document.getElementById('tbl-picker-label').textContent = r + ' × ' + c;
+      });
+      cell.addEventListener('click', () => { doInsert(r, c); closePicker(); });
+      grid.appendChild(cell);
+    }
+  }
+
+  function closePicker(){
+    document.getElementById('tbl-picker').classList.remove('open');
+    grid.querySelectorAll('.tbl-cell').forEach(el => el.classList.remove('hi'));
+    document.getElementById('tbl-picker-label').textContent = 'Insert table';
+  }
+  window.toggleTblPicker = function(e){
+    e.stopPropagation();
+    document.getElementById('tbl-picker').classList.toggle('open');
+  };
+  document.addEventListener('click', e => {
+    if(!e.target.closest('.tbl-picker-wrap')) closePicker();
+  });
+
+  // ── Insert table ─────────────────────────────
+  function doInsert(rows, cols){
+    editor.focus();
+    let html = '<table><tbody>';
+    for(let r = 0; r < rows; r++){
+      html += '<tr>' + '<td><br></td>'.repeat(cols) + '</tr>';
+    }
+    html += '</tbody></table>';
+    document.execCommand('insertHTML', false, html);
+    setTimeout(() => {
+      // Place cursor in first cell
+      const first = editor.querySelector('table:last-of-type td');
+      if(first) focusCell(first);
+      // Attach add-row buttons to all tables that don't have one yet
+      attachAddRowButtons();
+    }, 10);
+    if(typeof onNotesChange === 'function') onNotesChange();
+  }
+
+  // ── Focus a cell ─────────────────────────────
+  function focusCell(cell){
+    cell.focus();
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  // ── Add a row to a table, return first cell ──
+  function addRow(table){
+    const cols = table.querySelector('tr').querySelectorAll('td').length;
+    const tr = document.createElement('tr');
+    for(let i = 0; i < cols; i++){
+      const td = document.createElement('td'); td.innerHTML = '<br>';
+      tr.appendChild(td);
+    }
+    table.querySelector('tbody').appendChild(tr);
+    if(typeof onNotesChange === 'function') onNotesChange();
+    return tr.querySelector('td');
+  }
+
+  // ── ONE add-row button per table ─────────────
+  // The button is placed immediately after the <table> element.
+  // We track which tables already have a button via a WeakSet.
+  const _attached = new WeakSet();
+  function attachAddRowButtons(){
+    if(IS_VIEWER) return; // never show in viewer mode
+    editor.querySelectorAll('table').forEach(table => {
+      if(_attached.has(table)) return; // already done
+      _attached.add(table);
+      const btn = document.createElement('button');
+      btn.className = 'tbl-add-row';
+      btn.textContent = '+ Add row';
+      btn.contentEditable = 'false';
+      btn.addEventListener('mousedown', e => {
+        e.preventDefault(); // keep editor focus
+        const firstNewCell = addRow(table);
+        focusCell(firstNewCell);
+      });
+      // Insert the button right after the table
+      table.insertAdjacentElement('afterend', btn);
+    });
+  }
+
+  // Watch for new tables inserted into the editor
+  const obs = new MutationObserver(attachAddRowButtons);
+  obs.observe(editor, { childList: true, subtree: true });
+  // Run once on load (for tables already in saved notes)
+  setTimeout(attachAddRowButtons, 300);
+
+  // ── Tab / Shift+Tab between cells ────────────
+  // Using capture:true fires BEFORE the browser's tab-to-next-element
+  // behaviour, so we can preventDefault reliably without the browser
+  // switching to the address bar or next browser tab.
+  document.addEventListener('keydown', function(e){
+    if(e.key !== 'Tab') return;
+    // Find td/th the cursor is in
+    const sel = window.getSelection();
+    if(!sel || !sel.rangeCount) return;
+    let node = sel.anchorNode;
+    let cell = null;
+    while(node && node !== editor){
+      if(node.nodeName === 'TD' || node.nodeName === 'TH'){ cell = node; break; }
+      node = node.parentNode;
+    }
+    if(!cell) return; // not in a table — let browser handle
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const table = cell.closest('table');
+    const cells = Array.from(table.querySelectorAll('td, th'));
+    const idx   = cells.indexOf(cell);
+
+    if(!e.shiftKey){
+      // Tab → next cell, or new row if at end
+      if(idx < cells.length - 1){
+        focusCell(cells[idx + 1]);
+      } else {
+        focusCell(addRow(table));
+      }
+    } else {
+      // Shift+Tab → previous cell (stay put at first)
+      if(idx > 0) focusCell(cells[idx - 1]);
+    }
+  }, true); // capture phase
+
+})();
+
 </script>
 </body>
 </html>
