@@ -37,8 +37,8 @@
       "id": 37,
       "label": "Presenting my hypothesis",
       "parentId": 35,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-06-23",
       "collapsed": false
     },
     {
@@ -242,6 +242,6 @@
       "collapsed": false
     }
   ],
-  "notesPanelCollapsed": false,
+  "notesPanelCollapsed": true,
   "notes": "a"
 }
