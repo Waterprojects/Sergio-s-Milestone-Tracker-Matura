@@ -100,6 +100,19 @@ header h1{font-size:15px;font-weight:500;letter-spacing:.02em;color:var(--text-p
   gap:8px;
 }
 .viewer-banner.visible{display:flex;}
+.viewer-banner span{flex:0 1 auto;}
+.viewer-banner-close{
+  margin-left:auto;flex-shrink:0;
+  background:transparent;border:none;cursor:pointer;
+  color:var(--accent);opacity:.6;
+  display:flex;align-items:center;justify-content:center;
+  width:20px;height:20px;border-radius:5px;padding:0;
+  transition:opacity .15s, background .15s;
+}
+.viewer-banner-close:hover{opacity:1;background:rgba(52,211,120,0.14);}
+
+/* viewer: no edit/preview tab selection */
+body.viewer-mode .notes-tabs{display:none;}
 
 /* SAVE STATUS */
 #save-status{
@@ -233,23 +246,23 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 .notes-toggle{
   position:absolute;
   top:50%;transform:translateY(-50%);
-  width:18px;height:40px;
+  width:26px;height:60px;
   background:rgba(255,255,255,0.04);
-  border:0.5px solid var(--glass-border);
-  border-radius:4px;
+  border:0.5px solid var(--glass-done-border);
+  border-radius:6px;
   cursor:pointer;
   display:flex;align-items:center;justify-content:center;
-  color:var(--text-muted);
+  color:var(--accent);
   transition:background .15s, color .15s;
   z-index:10;
-  right:-9px;
+  right:-13px;
 }
-.notes-toggle:hover{background:var(--glass-hover);color:var(--text-primary);}
+.notes-toggle:hover{background:rgba(52,211,120,0.16);color:var(--accent);}
 .notes-toggle svg{transition:transform .35s cubic-bezier(.4,0,.2,1);}
 .notes-toggle.panel-collapsed svg{transform:rotate(180deg);}
 
 .notes-panel{
-  width:340px;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
+  width:calc(100vw - 56px);flex-shrink:0;display:flex;flex-direction:column;overflow:hidden;
   transition:width .35s cubic-bezier(.4,0,.2,1);
 }
 .notes-panel.collapsed{width:0;}
@@ -352,6 +365,31 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #notes-edit ::selection{background:rgba(52,211,120,0.25);}
 #notes-edit:focus ::selection{background:rgba(52,211,120,0.3);}
 
+/* NOTE TABLES (shared by editor + preview so the viewer looks identical) */
+#notes-edit table, #notes-preview table{
+  border-collapse:collapse;
+  margin:.7em 0;
+  width:auto;
+  font-family:var(--mono);
+  font-size:13px;
+}
+#notes-edit td, #notes-edit th,
+#notes-preview td, #notes-preview th{
+  border:0.5px solid var(--glass-border);
+  padding:7px 11px;
+  min-width:54px;
+  vertical-align:top;
+  white-space:normal;
+  color:var(--text-primary);
+}
+#notes-edit table tr:first-child td,
+#notes-preview table tr:first-child td,
+#notes-edit th, #notes-preview th{
+  background:rgba(255,255,255,0.05);
+  font-weight:500;
+  text-align:left;
+}
+
 #notes-preview{
   display:none;padding:20px;overflow:auto;flex:1;
   font-size:13px;line-height:1.8;color:var(--text-secondary);
@@ -448,7 +486,10 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
 <div class="viewer-banner" id="viewer-banner">
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5V8.5M6 3.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-  View-only mode — you're seeing a live snapshot. No edits can be made.
+  <span>View-only mode — you're seeing a live snapshot. No edits can be made.</span>
+  <button class="viewer-banner-close" title="Dismiss" onclick="this.parentElement.classList.remove('visible')">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+  </button>
 </div>
 
 <div class="main">
@@ -459,8 +500,8 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
   <div class="divider-wrap">
     <button class="notes-toggle" id="notes-toggle-btn" onclick="toggleNotesPanel()" title="Toggle notes">
-      <svg width="8" height="12" viewBox="0 0 8 12" fill="none">
-        <path d="M5.5 1L1.5 6L5.5 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg width="14" height="22" viewBox="0 0 8 12" fill="none">
+        <path d="M5.5 1L1.5 6L5.5 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
   </div>
@@ -545,6 +586,16 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
       </button>
       <button class="rt-btn" title="Numbered list" onclick="rtExec('insertOrderedList')">
         <svg width="12" height="10" viewBox="0 0 12 10" fill="none"><text x="0" y="3" font-size="4" fill="currentColor" font-family="monospace">1.</text><rect x="5" y="0.75" width="7" height="1.5" rx=".75" fill="currentColor"/><text x="0" y="7" font-size="4" fill="currentColor" font-family="monospace">2.</text><rect x="5" y="5.25" width="7" height="1.5" rx=".75" fill="currentColor"/></svg>
+      </button>
+
+      <div class="rt-sep"></div>
+
+      <!-- Table -->
+      <button class="rt-btn" title="Insert table" onclick="openTableModal()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="11" rx="1" stroke="currentColor" stroke-width="1.1"/><line x1="1" y1="4.8" x2="12" y2="4.8" stroke="currentColor" stroke-width="1.1"/><line x1="1" y1="8.4" x2="12" y2="8.4" stroke="currentColor" stroke-width="1.1"/><line x1="4.8" y1="1" x2="4.8" y2="12" stroke="currentColor" stroke-width="1.1"/><line x1="8.4" y1="1" x2="8.4" y2="12" stroke="currentColor" stroke-width="1.1"/></svg>
+      </button>
+      <button class="rt-btn" title="Add row to current table" onclick="addTableRow()">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="1" y="1" width="11" height="6.5" rx="1" stroke="currentColor" stroke-width="1.1"/><line x1="1" y1="4.25" x2="12" y2="4.25" stroke="currentColor" stroke-width="1.1"/><line x1="6.5" y1="9" x2="6.5" y2="12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><line x1="4.75" y1="10.75" x2="8.25" y2="10.75" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       </button>
 
       <div class="rt-sep"></div>
@@ -652,6 +703,21 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-share')">Close</button>
       <button class="btn btn-accent" onclick="copyShareLink()">Copy link</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Insert table -->
+<div class="modal-overlay" id="modal-table">
+  <div class="modal">
+    <h2>Insert table</h2>
+    <label>Rows</label>
+    <input type="number" id="modal-table-rows" min="1" max="50" value="3" />
+    <label>Columns</label>
+    <input type="number" id="modal-table-cols" min="1" max="20" value="3" />
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-table')">Cancel</button>
+      <button class="btn btn-accent" onclick="confirmTable()">Insert</button>
     </div>
   </div>
 </div>
@@ -1217,6 +1283,139 @@ function renderPreview(){
   const raw = document.getElementById('notes-edit').innerHTML;
   document.getElementById('notes-preview').innerHTML = raw;
 }
+
+// ─────────────────────────────────────────────
+// NOTE TABLES (OneNote-style)
+// ─────────────────────────────────────────────
+// Bookmark the caret so the insert-table modal can drop the table where you were.
+let _noteSelRange = null;
+function _saveNoteSelection(){
+  const sel = window.getSelection();
+  if(sel && sel.rangeCount && document.getElementById('notes-edit').contains(sel.anchorNode)){
+    _noteSelRange = sel.getRangeAt(0).cloneRange();
+  } else {
+    _noteSelRange = null;
+  }
+}
+function _restoreNoteSelection(){
+  if(!_noteSelRange) return;
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(_noteSelRange);
+}
+
+// Return the table cell the caret is in, but only if it's inside our editor.
+function _currentCell(){
+  const sel = window.getSelection();
+  if(!sel || !sel.rangeCount) return null;
+  let node = sel.getRangeAt(0).startContainer;
+  if(node.nodeType === 3) node = node.parentNode;
+  if(!node || !node.closest) return null;
+  const cell = node.closest('td,th');
+  if(!cell) return null;
+  if(!document.getElementById('notes-edit').contains(cell)) return null;
+  return cell;
+}
+
+function _placeCaret(el){
+  const sel = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(true);
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function openTableModal(){
+  if(IS_VIEWER) return;
+  _saveNoteSelection();               // remember where to insert
+  document.getElementById('modal-table-rows').value = 3;
+  document.getElementById('modal-table-cols').value = 3;
+  openModal('modal-table');
+  setTimeout(() => document.getElementById('modal-table-rows').focus(), 80);
+}
+
+function confirmTable(){
+  if(IS_VIEWER) return;
+  let rows = parseInt(document.getElementById('modal-table-rows').value, 10);
+  let cols = parseInt(document.getElementById('modal-table-cols').value, 10);
+  rows = Math.max(1, Math.min(50, isNaN(rows) ? 1 : rows));
+  cols = Math.max(1, Math.min(20, isNaN(cols) ? 1 : cols));
+  closeModal('modal-table');
+  insertTable(rows, cols);
+}
+
+function insertTable(rows, cols){
+  if(IS_VIEWER) return;
+  const editor = document.getElementById('notes-edit');
+  editor.focus();
+  _restoreNoteSelection();
+  let html = '<table class="note-table"><tbody>';
+  for(let r=0; r<rows; r++){
+    html += '<tr>';
+    for(let c=0; c<cols; c++) html += '<td><br></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table><p><br></p>';
+  document.execCommand('insertHTML', false, html);
+  onNotesChange();
+}
+
+// Always appends to the BOTTOM of the table the caret is currently in.
+function addTableRow(){
+  if(IS_VIEWER) return;
+  const cell = _currentCell();
+  if(!cell){ showToast('Click inside a table first','err'); return; }
+  const row = cell.parentNode;          // <tr>
+  const section = row.parentNode;       // <tbody> (or <table>)
+  const colCount = row.cells.length;
+  const tr = document.createElement('tr');
+  for(let c=0; c<colCount; c++){
+    const td = document.createElement('td');
+    td.innerHTML = '<br>';
+    tr.appendChild(td);
+  }
+  section.appendChild(tr);
+  onNotesChange();
+  _placeCaret(tr.cells[0]);
+}
+
+// Tab moves between cells; Tab in the last cell of the last row grows the table.
+notesEditorEl.addEventListener('keydown', e => {
+  if(IS_VIEWER) return;
+  if(e.key !== 'Tab') return;
+  const cell = _currentCell();
+  if(!cell) return;                     // not in a table → leave Tab alone
+  e.preventDefault();
+  const row = cell.parentNode;
+  const cells = Array.from(row.cells);
+  const idx = cells.indexOf(cell);
+  const section = row.parentNode;
+  const allRows = Array.from(section.rows);
+  const rowIdx = allRows.indexOf(row);
+
+  if(e.shiftKey){
+    const prevCell = cells[idx-1] ||
+      (allRows[rowIdx-1] ? allRows[rowIdx-1].cells[allRows[rowIdx-1].cells.length-1] : null);
+    if(prevCell) _placeCaret(prevCell);
+    return;
+  }
+
+  if(idx === cells.length-1 && rowIdx === allRows.length-1){
+    addTableRow();                      // last cell, last row → add a row at the bottom
+    return;
+  }
+  const nextCell = cells[idx+1] ||
+    (allRows[rowIdx+1] ? allRows[rowIdx+1].cells[0] : null);
+  if(nextCell) _placeCaret(nextCell);
+});
+
+['modal-table-rows','modal-table-cols'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if(e.key === 'Enter') confirmTable();
+    if(e.key === 'Escape') closeModal('modal-table');
+  });
+});
 
 // ─────────────────────────────────────────────
 // RENDER TREE
