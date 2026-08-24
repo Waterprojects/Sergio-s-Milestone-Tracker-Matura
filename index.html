@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -150,7 +151,7 @@ body.viewer-mode .notes-tabs{display:none;}
   pointer-events:none;overflow:visible;
 }
 
-/* PHASE CARDS â€” one block per top-level milestone */
+/* PHASE CARDS — one block per top-level milestone */
 .phase-card{
   background:#fff;
   border:1px solid #e8e7e4;
@@ -525,7 +526,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 
 <div class="viewer-banner" id="viewer-banner">
   <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5.5V8.5M6 3.5V4.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-  <span>View-only mode â€” you're seeing a live snapshot. No edits can be made.</span>
+  <span>View-only mode — you're seeing a live snapshot. No edits can be made.</span>
   <button class="viewer-banner-close" title="Dismiss" onclick="this.parentElement.classList.remove('visible')">
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1 1L9 9M9 1L1 9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
   </button>
@@ -640,13 +641,13 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
       <div class="rt-sep"></div>
 
       <!-- Clear formatting -->
-      <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">Tâœ•</button>
+      <button class="rt-btn" title="Clear formatting" onclick="rtExec('removeFormat')" style="font-size:10px;letter-spacing:-.5px;">T✕</button>
     </div>
 
     <div class="notes-body">
       <div id="notes-edit"
            contenteditable="true"
-           data-placeholder="Write your work journalâ€¦ select text to format it."></div>
+           data-placeholder="Write your work journal… select text to format it."></div>
       <div id="notes-preview"></div>
     </div>
   </div>
@@ -683,7 +684,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
     <label>Personal Access Token</label>
     <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx" />
     <p class="modal-note">
-      Token needs <code>repo</code> scope only. Stored in your browser only â€” never shared, never sent anywhere except GitHub's API directly from your device.
+      Token needs <code>repo</code> scope only. Stored in your browser only — never shared, never sent anywhere except GitHub's API directly from your device.
     </p>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-github')">Cancel</button>
@@ -697,7 +698,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   <div class="modal">
     <h2 id="modal-node-title">Add Milestone</h2>
     <label>Label</label>
-    <input type="text" id="modal-label-input" placeholder="Milestone nameâ€¦" />
+    <input type="text" id="modal-label-input" placeholder="Milestone name…" />
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-node')">Cancel</button>
       <button class="btn btn-accent" id="modal-confirm-btn">Add</button>
@@ -723,7 +724,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
   <div class="modal">
     <h2>Rename project</h2>
     <label>Project name</label>
-    <input type="text" id="modal-project-input" placeholder="My Projectâ€¦" />
+    <input type="text" id="modal-project-input" placeholder="My Project…" />
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-project')">Cancel</button>
       <button class="btn btn-accent" onclick="confirmRenameProject()">Save</button>
@@ -735,7 +736,7 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 <div class="modal-overlay" id="modal-share">
   <div class="modal">
     <h2>Share with someone</h2>
-    <p class="modal-note">Send this link. They'll see the live data in read-only mode â€” no editing, no access to your token or config.</p>
+    <p class="modal-note">Send this link. They'll see the live data in read-only mode — no editing, no access to your token or config.</p>
     <label>View-only link</label>
     <div class="share-link-box" id="share-link-text" onclick="copyShareLink()"></div>
     <p class="modal-note" id="share-visibility-note"></p>
@@ -764,9 +765,9 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 <div id="toast"></div>
 
 <script>
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // RICH TEXT HELPERS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function rtExec(cmd, value){
   // execCommand needs the editor to be focused
   const editor = document.getElementById('notes-edit');
@@ -804,18 +805,18 @@ document.getElementById('rich-toolbar').addEventListener('mousedown', e => {
   }
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // MODE DETECTION
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 const _urlParams = new URLSearchParams(location.search);
 const _viewParam = _urlParams.get('view');
 const IS_VIEWER  = !!_viewParam;
 
 if(IS_VIEWER) document.body.classList.add('viewer-mode');
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // GITHUB CONFIG
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 const CFG_KEY   = 'pt_github_cfg';
 const DATA_PATH = 'tracker-data.json';
 
@@ -849,15 +850,15 @@ function saveGithubConfig(){
     showToast('Fill in username, repo, and token.','err'); return;
   }
   saveConfig(cfg);
-  _lastKnownSha = null;   // new repo/branch/token â†’ discard any cached SHA
+  _lastKnownSha = null;   // new repo/branch/token → discard any cached SHA
   closeModal('modal-github');
   showToast('Config saved. Use the Save button to push data.','ok');
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // DATA MODEL
 // notes is now stored as HTML (innerHTML of the editor)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 let state = {
   projectName: 'Project Tracker',
   nodes: [],
@@ -893,9 +894,9 @@ function loadLocal(){
   } catch(e){}
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // GITHUB API
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // Holds the SHA returned by the most recent successful save. GitHub's contents
 // GET can briefly return a stale SHA right after a write, which is what made the
 // second save fail with a 409. Reusing the SHA that the PUT hands back (always
@@ -904,7 +905,7 @@ let _lastKnownSha = null;
 
 async function githubPush(){
   const cfg = loadConfig();
-  if(!cfg.token) return { ok: false, msg: 'No config â€” open âš™ Config first.' };
+  if(!cfg.token) return { ok: false, msg: 'No config — open ⚙ Config first.' };
 
   const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${DATA_PATH}`;
   const authHeader = { 'Authorization': `token ${cfg.token}` };
@@ -942,7 +943,7 @@ async function githubPush(){
     let sha = _lastKnownSha !== null ? _lastKnownSha : await freshSha();
     let res = await put(sha);
 
-    // 409 = SHA conflict â€” our SHA was stale. Force a fresh one and retry once.
+    // 409 = SHA conflict — our SHA was stale. Force a fresh one and retry once.
     if(res.status === 409){
       await new Promise(r => setTimeout(r, 600));
       sha = await freshSha();
@@ -972,7 +973,7 @@ async function githubPull(){
     // Read through the GitHub API rather than raw.githubusercontent.com. The raw
     // CDN ignores cache-busting query params and can serve content that is
     // several minutes stale, and different edge nodes can hold different
-    // versions â€” that's what made the notes appear on one refresh and vanish on
+    // versions — that's what made the notes appear on one refresh and vanish on
     // the next. The API works on public repos without a token and reflects
     // commits within seconds.
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${DATA_PATH}?ref=${branch}&t=${Date.now()}`;
@@ -1014,9 +1015,9 @@ async function githubPull(){
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // MANUAL SAVE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 async function manualSave(){
   if(!hasConfig()){
     openGithubConfig();
@@ -1025,8 +1026,8 @@ async function manualSave(){
   }
   const btn = document.getElementById('btn-save');
   const statusEl = document.getElementById('save-status');
-  if(btn){ btn.disabled = true; btn.textContent = 'Savingâ€¦'; }
-  if(statusEl){ statusEl.className = 'saving'; statusEl.textContent = 'savingâ€¦'; }
+  if(btn){ btn.disabled = true; btn.textContent = 'Saving…'; }
+  if(statusEl){ statusEl.className = 'saving'; statusEl.textContent = 'saving…'; }
 
   stashLocal();
   const result = await githubPush();
@@ -1034,7 +1035,7 @@ async function manualSave(){
   if(btn){ btn.textContent = 'Save'; btn.disabled = false; }
   if(result.ok){
     markClean();
-    if(statusEl){ statusEl.className = 'ok'; statusEl.textContent = 'saved âœ“'; }
+    if(statusEl){ statusEl.className = 'ok'; statusEl.textContent = 'saved ✓'; }
     showToast('Saved to GitHub','ok');
     setTimeout(() => { if(statusEl) statusEl.textContent = ''; }, 4000);
   } else {
@@ -1043,9 +1044,9 @@ async function manualSave(){
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // HEADER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function buildHeader(){
   const actions = document.getElementById('header-actions');
   actions.innerHTML = '';
@@ -1054,15 +1055,15 @@ function buildHeader(){
     document.getElementById('viewer-banner').classList.add('visible');
     const btnRefresh = document.createElement('button');
     btnRefresh.className = 'btn';
-    btnRefresh.textContent = 'â†» Refresh';
+    btnRefresh.textContent = '↻ Refresh';
     btnRefresh.onclick = async () => {
       btnRefresh.disabled = true;
-      btnRefresh.textContent = 'Loadingâ€¦';
+      btnRefresh.textContent = 'Loading…';
       const r = await githubPull();
       if(r.ok){ render(); showToast('Refreshed','ok'); }
       else showToast(r.msg,'err');
       btnRefresh.disabled = false;
-      btnRefresh.textContent = 'â†» Refresh';
+      btnRefresh.textContent = '↻ Refresh';
     };
     actions.appendChild(btnRefresh);
     // Disable editor in viewer mode
@@ -1084,19 +1085,19 @@ function buildHeader(){
 
     const btnShare = document.createElement('button');
     btnShare.className = 'btn';
-    btnShare.textContent = 'â¤´ Share';
+    btnShare.textContent = '⤴ Share';
     btnShare.onclick = openShareModal;
     actions.appendChild(btnShare);
 
     const btnConfig = document.createElement('button');
     btnConfig.className = 'btn';
-    btnConfig.textContent = 'âš™ Config';
+    btnConfig.textContent = '⚙ Config';
     btnConfig.onclick = openGithubConfig;
     actions.appendChild(btnConfig);
 
     const btnRename = document.createElement('button');
     btnRename.className = 'btn';
-    btnRename.textContent = 'âœŽ Rename';
+    btnRename.textContent = '✎ Rename';
     btnRename.onclick = openRenameProject;
     actions.appendChild(btnRename);
 
@@ -1108,9 +1109,9 @@ function buildHeader(){
   }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // SHARE MODAL
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function openShareModal(){
   const cfg = loadConfig();
   if(!cfg.owner || !cfg.repo || !cfg.branch){
@@ -1130,9 +1131,9 @@ function copyShareLink(){
   navigator.clipboard.writeText(text).then(() => showToast('Link copied!','ok'));
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // MODAL CORE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 
@@ -1140,9 +1141,9 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if(e.target === el) el.classList.remove('open'); });
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // ADD / EDIT NODE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 let _nodeModal = { mode: null, parentId: null, editId: null };
 
 function openAddMajor(){
@@ -1200,9 +1201,9 @@ document.getElementById('modal-label-input').addEventListener('keydown', e => {
   if(e.key === 'Escape') closeModal('modal-node');
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // RENAME PROJECT
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function openRenameProject(){
   if(IS_VIEWER) return;
   document.getElementById('modal-project-input').value = state.projectName;
@@ -1223,9 +1224,9 @@ document.getElementById('modal-project-input').addEventListener('keydown', e => 
   if(e.key === 'Escape') closeModal('modal-project');
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // MARK DONE / UNDONE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 let _dateNodeId = null;
 function toggleDone(nodeId){
   if(IS_VIEWER) return;
@@ -1251,9 +1252,9 @@ function confirmDate(){
   closeModal('modal-date');
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // DELETE NODE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function deleteNode(nodeId){
   if(IS_VIEWER) return;
   function collectIds(id){
@@ -1265,9 +1266,9 @@ function deleteNode(nodeId){
   stashLocal(); markDirty(); render();
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // COLLAPSE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function toggleCollapse(nodeId){
   const node = state.nodes.find(n => n.id === nodeId);
   if(!node) return;
@@ -1276,9 +1277,9 @@ function toggleCollapse(nodeId){
   render();
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // NOTES  (now reads/writes innerHTML)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function toggleNotesPanel(){
   const panel = document.getElementById('notes-panel');
   const btn   = document.getElementById('notes-toggle-btn');
@@ -1323,9 +1324,9 @@ function renderPreview(){
   document.getElementById('notes-preview').innerHTML = raw;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // NOTE TABLES (OneNote-style)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // Bookmark the caret so the insert-table modal can drop the table where you were.
 let _noteSelRange = null;
 function _saveNoteSelection(){
@@ -1424,7 +1425,7 @@ notesEditorEl.addEventListener('keydown', e => {
   if(IS_VIEWER) return;
   if(e.key !== 'Tab') return;
   const cell = _currentCell();
-  if(!cell) return;                     // not in a table â†’ leave Tab alone
+  if(!cell) return;                     // not in a table → leave Tab alone
   e.preventDefault();
   const row = cell.parentNode;
   const cells = Array.from(row.cells);
@@ -1441,7 +1442,7 @@ notesEditorEl.addEventListener('keydown', e => {
   }
 
   if(idx === cells.length-1 && rowIdx === allRows.length-1){
-    addTableRow();                      // last cell, last row â†’ add a row at the bottom
+    addTableRow();                      // last cell, last row → add a row at the bottom
     return;
   }
   const nextCell = cells[idx+1] ||
@@ -1456,9 +1457,9 @@ notesEditorEl.addEventListener('keydown', e => {
   });
 });
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // RENDER TREE
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function render(){
   const root = document.getElementById('tree-root');
   const majorNodes = state.nodes.filter(n => n.parentId === null);
@@ -1477,7 +1478,7 @@ function render(){
   if(!majorNodes.length){
     const emp = document.createElement('div');
     emp.className = 'empty-state';
-    emp.innerHTML = '<div style="font-size:28px;color:#d6d6d2">â—»</div><div>No milestones yet</div>';
+    emp.innerHTML = '<div style="font-size:28px;color:#d6d6d2">◻</div><div>No milestones yet</div>';
     if(!IS_VIEWER){
       const btn = document.createElement('button');
       btn.className = 'btn btn-accent';
@@ -1606,9 +1607,9 @@ function createNodeEl(node, depth){
   return wrap;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // NODE TOOLBAR
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 let _toolbarNodeId = null;
 let _toolbarHideTimer = null;
 
@@ -1645,9 +1646,9 @@ function hideToolbar(){
   _toolbarNodeId = null;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // SVG CONNECTORS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function isInsideCollapsed(el){
   let p = el.parentElement;
   while(p && p.id !== 'tree-root'){
@@ -1658,14 +1659,14 @@ function isInsideCollapsed(el){
 }
 
 function drawConnectors(){
-  // Flat list layout â€” no connector lines to draw.
+  // Flat list layout — no connector lines to draw.
   const svg = document.getElementById('connector-svg');
   if(svg) svg.innerHTML = '';
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // PROGRESS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function updateProgress(){
   const all  = state.nodes.length;
   const done = state.nodes.filter(n => n.done).length;
@@ -1674,9 +1675,9 @@ function updateProgress(){
   document.getElementById('progress-label').textContent = `${done} / ${all} done`;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // TOAST
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 let _toastTimer = null;
 function showToast(msg, type=''){
   const el = document.getElementById('toast');
@@ -1686,9 +1687,9 @@ function showToast(msg, type=''){
   _toastTimer = setTimeout(() => { el.className = ''; }, 3500);
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // UTILS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 function formatDoneDate(str){
   if(!str) return '';
   const [, m, d] = str.split('-');
@@ -1703,9 +1704,9 @@ function formatDate(str){
   return `${d} ${months[parseInt(m)-1]} ${y}`;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 // INIT
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
 window.addEventListener('resize', drawConnectors);
 document.getElementById('tree-panel').addEventListener('scroll', drawConnectors);
 
@@ -1713,7 +1714,7 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
   buildHeader();
 
   if(IS_VIEWER){
-    document.getElementById('project-title-display').textContent = 'Loadingâ€¦';
+    document.getElementById('project-title-display').textContent = 'Loading…';
     const r = await githubPull();
     if(r.ok){
       render();
@@ -1722,7 +1723,7 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
       showToast(r.msg, 'err');
       document.getElementById('tree-root').innerHTML =
         `<div class="empty-state" style="opacity:1;color:#d92b1c;text-align:center;padding:40px;">
-          <div style="font-size:28px">âœ•</div>
+          <div style="font-size:28px">✕</div>
           <div>${r.msg}</div>
           <div style="font-size:11px;margin-top:8px;opacity:.6">Make sure the repository is public.</div>
         </div>`;
