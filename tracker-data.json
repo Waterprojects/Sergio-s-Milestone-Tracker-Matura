@@ -93,8 +93,8 @@
       "id": 44,
       "label": "General Page format",
       "parentId": 42,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-08-24",
       "collapsed": false
     },
     {
