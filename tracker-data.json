@@ -61,8 +61,8 @@
       "id": 40,
       "label": "Defining exact media selection",
       "parentId": 39,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-08-24",
       "collapsed": false
     },
     {
@@ -242,6 +242,6 @@
       "collapsed": false
     }
   ],
-  "notesPanelCollapsed": false,
+  "notesPanelCollapsed": true,
   "notes": "<br><p><br></p><p>fgg</p>"
 }
