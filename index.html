@@ -154,7 +154,7 @@ body.viewer-mode .notes-tabs{display:none;}
 .node-wrap{position:relative;margin:8px 0;}
 
 .node{
-  display:flex;align-items:center;gap:10px;
+  display:flex;align-items:flex-start;gap:10px;
   padding:10px 16px;
   border-radius:var(--node-radius);
   border:0.5px solid var(--glass-border);
@@ -164,9 +164,8 @@ body.viewer-mode .notes-tabs{display:none;}
   cursor:pointer;
   transition:background .2s,border-color .2s,transform .15s;
   position:relative;
-  white-space:nowrap;
   user-select:none;
-  min-width:140px;max-width:220px;
+  min-width:140px;
 }
 .node::before{
   content:'';position:absolute;inset:0;
@@ -178,7 +177,7 @@ body.viewer-mode .notes-tabs{display:none;}
 .node.done{background:var(--glass-done);border-color:var(--glass-done-border);}
 .node.done::before{background:linear-gradient(135deg,rgba(52,211,120,0.12) 0%,transparent 60%);}
 .node.done .node-label{color:var(--accent)}
-.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;overflow:hidden;text-overflow:ellipsis;}
+.node-label{font-size:13px;font-weight:400;color:var(--text-primary);flex:1;word-break:break-word;}
 .node-check{
   width:16px;height:16px;border-radius:50%;
   border:1.5px solid rgba(255,255,255,0.2);
@@ -1585,6 +1584,15 @@ function hideToolbar(){
 // ─────────────────────────────────────────────
 // SVG CONNECTORS
 // ─────────────────────────────────────────────
+function isInsideCollapsed(el){
+  let p = el.parentElement;
+  while(p && p.id !== 'tree-root'){
+    if(p.classList.contains('children') && p.classList.contains('collapsed')) return true;
+    p = p.parentElement;
+  }
+  return false;
+}
+
 function drawConnectors(){
   const svg = document.getElementById('connector-svg');
   const panel = document.getElementById('tree-panel');
@@ -1593,6 +1601,7 @@ function drawConnectors(){
   const positions = {};
 
   document.querySelectorAll('.node[data-node-id]').forEach(el => {
+    if(isInsideCollapsed(el)) return;
     const nid = parseInt(el.dataset.nodeId);
     const r = el.getBoundingClientRect();
     positions[nid] = {
