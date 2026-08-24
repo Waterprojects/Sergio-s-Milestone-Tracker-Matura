@@ -45,8 +45,8 @@
       "id": 38,
       "label": "Introducing my methods",
       "parentId": 35,
-      "done": false,
-      "doneDate": null,
+      "done": true,
+      "doneDate": "2026-08-24",
       "collapsed": false
     },
     {
