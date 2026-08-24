@@ -37,8 +37,8 @@
       "id": 37,
       "label": "Presenting my hypothesis",
       "parentId": 35,
-      "done": true,
-      "doneDate": "2026-06-23",
+      "done": false,
+      "doneDate": null,
       "collapsed": false
     },
     {
@@ -61,8 +61,8 @@
       "id": 40,
       "label": "Defining exact media selection",
       "parentId": 39,
-      "done": true,
-      "doneDate": "2026-08-24",
+      "done": false,
+      "doneDate": null,
       "collapsed": false
     },
     {
@@ -93,8 +93,8 @@
       "id": 44,
       "label": "General Page format",
       "parentId": 42,
-      "done": true,
-      "doneDate": "2026-08-24",
+      "done": false,
+      "doneDate": null,
       "collapsed": false
     },
     {
