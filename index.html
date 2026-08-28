@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -513,6 +512,15 @@ body.viewer-mode .node-check{pointer-events:none;cursor:default;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #toast.toast-ok{background:var(--ink);color:#fff;}
 #toast.toast-err{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* ── Resizable table columns ── */
+#notes-edit td, #notes-edit th { position: relative; }
+.col-resizer {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 5px; cursor: col-resize;
+  background: transparent; user-select: none; z-index: 1;
+}
+.col-resizer:hover, .col-resizer:active { background: rgba(0,0,0,0.15); }
 </style>
 </head>
 <body>
@@ -1753,6 +1761,28 @@ document.getElementById('tree-panel').addEventListener('scroll', drawConnectors)
     }
   }
 })();
+
+// ─── RESIZABLE TABLE COLUMNS ───────────────────
+function initTableResize(table){
+  table.querySelectorAll('td,th').forEach(cell => {
+    if(cell.querySelector('.col-resizer')) return;
+    const h = document.createElement('div');
+    h.className = 'col-resizer';
+    h.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      const x0 = e.pageX, w0 = cell.offsetWidth;
+      function onMove(e){ cell.style.width = cell.style.minWidth = Math.max(30, w0 + e.pageX - x0) + 'px'; }
+      function onUp(){ document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); onNotesChange(); }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    cell.appendChild(h);
+  });
+}
+
+new MutationObserver(() => {
+  document.querySelectorAll('#notes-edit table').forEach(initTableResize);
+}).observe(document.getElementById('notes-edit'), { childList: true, subtree: true });
 </script>
 </body>
 </html>
