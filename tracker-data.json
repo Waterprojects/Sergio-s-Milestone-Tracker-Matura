@@ -248,6 +248,14 @@
       "done": false,
       "doneDate": null,
       "collapsed": false
+    },
+    {
+      "id": 71,
+      "label": "Phase 6 Final Polish (November - December)",
+      "parentId": null,
+      "done": false,
+      "doneDate": null,
+      "collapsed": false
     }
   ],
   "notesPanelCollapsed": false,
